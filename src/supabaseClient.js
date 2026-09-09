@@ -6,11 +6,17 @@ import { createClient } from "@supabase/supabase-js";
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-if (!supabaseUrl || !supabaseAnonKey) {
-  console.error(
-    "Supabase não configurado: faltam VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY. " +
-    "Veja o .env.example na raiz do projeto."
-  );
-}
+export let supabase = null;
+export let supabaseConfigError = null;
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+if (!supabaseUrl || !supabaseAnonKey) {
+  supabaseConfigError =
+    "Faltam as variáveis VITE_SUPABASE_URL e/ou VITE_SUPABASE_ANON_KEY. Configure as duas no Netlify (Site configuration → Environment variables) e depois dispare um novo deploy (Deploys → Trigger deploy).";
+} else {
+  try {
+    supabase = createClient(supabaseUrl, supabaseAnonKey);
+  } catch (err) {
+    supabaseConfigError =
+      `Não foi possível conectar ao Supabase (${err.message}). Confira se VITE_SUPABASE_URL está exatamente no formato https://xxxxxxxx.supabase.co — sem espaço, sem aspas e sem barra "/" sobrando no final.`;
+  }
+}
