@@ -83,26 +83,33 @@ o `import` para o novo arquivo).
 ## Painel administrativo
 
 O painel faz parte deste mesmo projeto, em `/admin` (ex.:
-`https://seu-site.netlify.app/admin`). Ele pede uma senha simples antes de
-entrar — está definida em `src/components/AdminGate.jsx` (senha padrão:
-`kanoa2026`, troque antes de divulgar o link).
+`https://seu-site.netlify.app/admin`). O login agora é real, via Supabase
+Auth — não existe mais senha fixa no código.
 
-**Isso não é segurança de verdade.** É uma trava só para evitar acesso por
-engano — como o código roda no navegador de quem acessa, dá para contornar.
-O painel ainda funciona com dados fictícios (mock), então o risco hoje é
-baixo, mas antes de ligar isso a dados reais de clientes, troque por
-autenticação de verdade (Supabase Auth) — o cadastro de funcionários e
-permissões por aba já está desenhado dentro do próprio painel e o schema já
-tem a tabela `staff` pronta para isso, faltando só conectar.
+**Já conectado ao banco de verdade:** Dashboard (indicadores reais),
+Agenda (agendamentos reais, com cancelamento), Clientes/CRM (com clube de
+mensalidade), Planos da Quadra, Produtos do Bar, Vendas, e Configurações
+(turnos por dia da semana, dados da empresa, mensagem do WhatsApp e
+funcionários).
 
-## Próximo passo: ligar o painel ao Supabase
+**Ainda não conectado:** Mesas/Comandas — esse módulo precisa de tabelas
+novas no banco (`tables`, `table_sessions`, `order_items`) que não fizeram
+parte do schema inicial. Relatórios continua sendo só a estrutura (por
+design — as regras de cada relatório ainda não foram definidas).
 
-O site público já está ligado. Falta:
+### Como cadastrar um funcionário
 
-1. Trocar `AdminGate` por login real com Supabase Auth (a tabela `staff` já
-   existe no schema, com o campo `permissions` por funcionário).
-2. Trocar os dados fictícios de cada aba do painel (Agenda, CRM, Mesas,
-   Produtos, Vendas...) por consultas reais, uma aba de cada vez.
+1. No Supabase, vá em **Authentication → Users → Add user** e crie o
+   e-mail/senha da pessoa.
+2. Copie o **User UID** dela.
+3. No painel, entre como dono → **Configurações → Funcionários → Novo
+   funcionário** → cole o UID, dê um nome, marque as abas permitidas.
 
-Nada na estrutura atual impede essa troca; os componentes do painel só
-recebem dados prontos, não sabem de onde eles vêm.
+O dono (`is_owner = true` na tabela `staff`) sempre tem acesso completo,
+independente das permissões marcadas.
+
+## Próximo passo: módulo de Mesas / Comandas
+
+Quando quiser seguir com o bar: um novo pedaço de SQL cria as tabelas de
+mesas e comandas, e a tela de Mesas passa a funcionar com dados reais do
+mesmo jeito que o resto do painel já funciona hoje.

@@ -1,20 +1,16 @@
 import PublicSite from "./pages/PublicSite";
 import AdminGate from "./components/AdminGate";
-import AdminPanel from "./pages/Admin";
 import { supabaseConfigError } from "./supabaseClient";
 
 // Sem biblioteca de rotas — simples de propósito. Se o caminho digitado
-// for /admin, mostra o painel (atrás da senha); qualquer outro caminho
-// mostra o site público. O netlify.toml já redireciona tudo para o
-// index.html, então essa checagem no navegador é suficiente.
+// for /admin, mostra o painel (atrás do login real); qualquer outro
+// caminho mostra o site público.
 function isAdminPath() {
   if (typeof window === "undefined") return false;
   return window.location.pathname.replace(/\/+$/, "") === "/admin";
 }
 
 export default function App() {
-  // Se a configuração do Supabase estiver errada, mostra o motivo na tela
-  // em vez de deixar a página em branco sem explicação nenhuma.
   if (supabaseConfigError) {
     return (
       <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#F7F3EE", padding: 24, fontFamily: "sans-serif" }}>
@@ -27,11 +23,7 @@ export default function App() {
   }
 
   if (isAdminPath()) {
-    return (
-      <AdminGate>
-        <AdminPanel />
-      </AdminGate>
-    );
+    return <AdminGate />;
   }
   return <PublicSite />;
 }
