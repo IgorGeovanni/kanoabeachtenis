@@ -1,10 +1,9 @@
-import { getAvailability } from "../data/courtData";
-
-export default function TimeSlotGrid({ date, selected, onSelect }) {
-  if (!date) return null;
-  const slots = getAvailability(date);
-
-  if (slots.length === 0) {
+// Agora puramente visual: recebe os horários já calculados pelo banco.
+export default function TimeSlotGrid({ slots, loading, selected, onSelect }) {
+  if (loading) {
+    return <div className="kn-card-sub" style={{ padding: "10px 0" }}>Carregando horários...</div>;
+  }
+  if (!slots || slots.length === 0) {
     return <div className="kn-card-sub" style={{ padding: "10px 0" }}>Fechado neste dia — escolha outra data.</div>;
   }
 

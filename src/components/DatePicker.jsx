@@ -1,4 +1,4 @@
-import { dateKey, SCHEDULE } from "../data/courtData";
+import { dateKey } from "../data/courtData";
 
 function buildDays(count = 14) {
   const days = [];
@@ -12,14 +12,17 @@ function buildDays(count = 14) {
   return days;
 }
 
-export default function DatePicker({ selected, onSelect }) {
+// openWeekdays: Set com os números de dia da semana (0=domingo...6=sábado)
+// que têm pelo menos um turno cadastrado. Enquanto ainda não carregou
+// (null), nenhum dia aparece fechado — evita piscar tudo cinza.
+export default function DatePicker({ selected, onSelect, openWeekdays }) {
   const days = buildDays();
   return (
     <div className="kn-date-row">
       {days.map((d) => {
         const key = dateKey(d);
         const isActive = selected && dateKey(selected) === key;
-        const closed = (SCHEDULE[d.getDay()] || []).length === 0;
+        const closed = openWeekdays ? !openWeekdays.has(d.getDay()) : false;
         return (
           <div
             key={key}

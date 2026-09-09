@@ -1,69 +1,15 @@
 // ============================================================================
-// DADOS DA QUADRA — por enquanto gerados localmente (mock).
-// Quando o Supabase estiver configurado, troque `getAvailability` para buscar
-// os horários reais da tabela `bookings` e `PRODUCTS` para vir da tabela
-// `products` (product_type = 'court', status = 'ativo').
+// CAMADA DE DADOS — agora conversando de verdade com o Supabase.
+// Nenhum dado fica mais fixo no código: produtos, turnos e disponibilidade
+// vêm do banco (ver supabase/schema.sql).
 // ============================================================================
+import { supabase } from "../supabaseClient";
 
-// A quadra funciona por turnos, com intervalos entre eles — e cada dia da
-// semana pode ter turnos diferentes (ex.: domingo mais curto que os demais).
-// Chaves seguem o Date.getDay() do JavaScript: 0 = domingo ... 6 = sábado.
-// Ajustável aqui (e, no futuro, pela tela de Configurações do painel).
-const WEEKDAY_SHIFTS = [
-  { id: "manha", label: "Manhã", start: 8, end: 11 },
-  { id: "tarde", label: "Tarde", start: 13, end: 17 },
-  { id: "noite", label: "Noite", start: 18, end: 22 },
-];
-
-export const SCHEDULE = {
-  0: [{ id: "dom-manha", label: "Manhã", start: 8, end: 12 }], // domingo: turno único e mais curto
-  1: WEEKDAY_SHIFTS,
-  2: WEEKDAY_SHIFTS,
-  3: WEEKDAY_SHIFTS,
-  4: WEEKDAY_SHIFTS,
-  5: WEEKDAY_SHIFTS,
-  6: WEEKDAY_SHIFTS,
-};
-
-function buildSlots(shifts) {
-  const slots = [];
-  shifts.forEach((shift) => {
-    for (let h = shift.start; h < shift.end; h++) {
-      slots.push({ hour: `${String(h).padStart(2, "0")}:00`, shift: shift.label, shiftId: shift.id });
-    }
-  });
-  return slots;
-}
-
-export const PRODUCTS = [
-  { id: 1, name: "Day Use", desc: "Acesso avulso à quadra por 1 hora", price: 80 },
-  { id: 2, name: "Aula Individual", desc: "Aula particular de 1 hora com professor", price: 120 },
-  { id: 3, name: "Pacote Semanal", desc: "1 sessão semanal recorrente", price: 150 },
-  { id: 4, name: "Pacote Mensal", desc: "4 sessões semanais recorrentes", price: 450 },
-];
-
-export const WHATSAPP_TEMPLATE =
+export const DEFAULT_WHATSAPP_TEMPLATE =
   "Olá, {nome}! Seu agendamento para {data} às {horario} foi realizado com sucesso.";
 
 export function fillTemplate(template, vars) {
   return template.replace(/\{(\w+)\}/g, (_, key) => vars[key] ?? `{${key}}`);
-}
-
-// Hash simples e determinístico a partir da string da data, só para o
-// protótipo variar a disponibilidade dia a dia sem precisar de backend.
-function seedFromDate(key) {
-  let seed = 0;
-  for (let i = 0; i < key.length; i++) seed = (seed * 31 + key.charCodeAt(i)) >>> 0;
-  return seed;
-}
-
-// Recebe um objeto Date. Usa o dia da semana para decidir QUAIS turnos
-// existem, e a data completa para variar quais horários já estão ocupados.
-export function getAvailability(date) {
-  const shifts = SCHEDULE[date.getDay()] || [];
-  const slots = buildSlots(shifts);
-  const seed = seedFromDate(dateKey(date));
-  return slots.map((slot, i) => ({ ...slot, available: ((seed >> i) & 3) !== 0 }));
 }
 
 export function formatDateLabel(date) {
@@ -72,4 +18,67 @@ export function formatDateLabel(date) {
 
 export function dateKey(date) {
   return date.toISOString().slice(0, 10);
+}
+
+// Planos/produtos da quadra, só os ativos.
+export async function fetchCourtProducts() {
+  const { data, error } = await supabase
+    .from("products")
+    .select("id, name, description, price")
+    .eq("product_type", "court")
+    .eq("status", "ativo")
+    .order("price", { ascending: true });
+  if (error) throw error;
+  return data.map((p) => ({ id: p.id, name: p.name, desc: p.description, price: Number(p.price) }));
+}
+
+// Quais dias da semana têm pelo menos um turno cadastrado (para desenhar o
+// calendário — dia sem turno aparece apagado/fechado).
+export async function fetchOpenWeekdays() {
+  const { data, error } = await supabase.from("court_shifts").select("weekday");
+  if (error) throw error;
+  return new Set(data.map((r) => r.weekday));
+}
+
+// Horários de um dia específico, já cruzados com os agendamentos existentes.
+// Chama a function get_available_slots do banco (não expõe dados de clientes).
+export async function fetchAvailability(date, court = 1) {
+  const { data, error } = await supabase.rpc("get_available_slots", {
+    p_date: dateKey(date),
+    p_court: court,
+  });
+  if (error) throw error;
+  return data.map((row) => ({
+    hour: row.start_time.slice(0, 5),
+    shift: row.shift_label,
+    available: row.is_available,
+  }));
+}
+
+// Mensagem de confirmação configurada em Configurações (tabela settings).
+export async function fetchWhatsappTemplate() {
+  const { data, error } = await supabase
+    .from("settings")
+    .select("value")
+    .eq("key", "whatsapp_message")
+    .maybeSingle();
+  if (error || !data) return DEFAULT_WHATSAPP_TEMPLATE;
+  return data.value;
+}
+
+// Cria o agendamento de verdade. A function do banco cuida de: achar ou criar
+// o cliente pelo telefone, e bloquear se o horário já tiver sido ocupado.
+export async function createBooking({ nome, telefone, cpf, nascimento, productId, court = 1, date, time }) {
+  const { data, error } = await supabase.rpc("create_booking", {
+    p_customer_name: nome,
+    p_customer_phone: telefone,
+    p_customer_cpf: cpf || null,
+    p_customer_birthdate: nascimento || null,
+    p_product_id: productId,
+    p_court: court,
+    p_date: dateKey(date),
+    p_time: time,
+  });
+  if (error) throw error;
+  return data; // id do agendamento criado
 }

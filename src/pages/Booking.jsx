@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ChevronLeft } from "lucide-react";
 import StepIndicator from "../components/StepIndicator";
 import DatePicker from "../components/DatePicker";
@@ -6,7 +6,15 @@ import TimeSlotGrid from "../components/TimeSlotGrid";
 import ProductList from "../components/ProductList";
 import ClientForm from "../components/ClientForm";
 import ConfirmationScreen from "../components/ConfirmationScreen";
-import { formatDateLabel } from "../data/courtData";
+import {
+  formatDateLabel,
+  fetchCourtProducts,
+  fetchOpenWeekdays,
+  fetchAvailability,
+  fetchWhatsappTemplate,
+  createBooking,
+  DEFAULT_WHATSAPP_TEMPLATE,
+} from "../data/courtData";
 
 const EMPTY_CLIENT = { nome: "", telefone: "", cpf: "", nascimento: "" };
 
@@ -22,6 +30,37 @@ export default function Booking({ onBack }) {
   const [client, setClient] = useState(EMPTY_CLIENT);
   const [confirmed, setConfirmed] = useState(false);
 
+  const [products, setProducts] = useState([]);
+  const [productsLoading, setProductsLoading] = useState(true);
+  const [openWeekdays, setOpenWeekdays] = useState(null);
+  const [slots, setSlots] = useState([]);
+  const [slotsLoading, setSlotsLoading] = useState(false);
+  const [whatsappTemplate, setWhatsappTemplate] = useState(DEFAULT_WHATSAPP_TEMPLATE);
+  const [submitting, setSubmitting] = useState(false);
+  const [errorMsg, setErrorMsg] = useState("");
+
+  // Carrega uma vez: planos da quadra, dias com turno cadastrado, e a
+  // mensagem de WhatsApp configurada.
+  useEffect(() => {
+    fetchCourtProducts()
+      .then(setProducts)
+      .catch(() => setErrorMsg("Não foi possível carregar os pacotes. Recarregue a página."))
+      .finally(() => setProductsLoading(false));
+    fetchOpenWeekdays().then(setOpenWeekdays).catch(() => {});
+    fetchWhatsappTemplate().then(setWhatsappTemplate).catch(() => {});
+  }, []);
+
+  // Toda vez que a data muda, busca os horários daquele dia específico.
+  useEffect(() => {
+    if (!date) return;
+    setSlotsLoading(true);
+    setTime(null);
+    fetchAvailability(date)
+      .then(setSlots)
+      .catch(() => setErrorMsg("Não foi possível carregar os horários. Tente novamente."))
+      .finally(() => setSlotsLoading(false));
+  }, [date]);
+
   const reset = () => {
     setStep(1);
     setDate(null);
@@ -29,12 +68,13 @@ export default function Booking({ onBack }) {
     setProduct(null);
     setClient(EMPTY_CLIENT);
     setConfirmed(false);
+    setErrorMsg("");
   };
 
   if (confirmed) {
     return (
       <div className="kn-shell">
-        <ConfirmationScreen booking={{ date, time, product, client }} onReset={reset} />
+        <ConfirmationScreen booking={{ date, time, product, client }} whatsappTemplate={whatsappTemplate} onReset={reset} />
       </div>
     );
   }
@@ -50,9 +90,38 @@ export default function Booking({ onBack }) {
     else setStep((s) => s - 1);
   };
 
+  const handleConfirm = async () => {
+    setSubmitting(true);
+    setErrorMsg("");
+    try {
+      await createBooking({
+        nome: client.nome,
+        telefone: client.telefone,
+        cpf: client.cpf,
+        nascimento: client.nascimento || null,
+        productId: product.id,
+        court: 1,
+        date,
+        time,
+      });
+      setConfirmed(true);
+    } catch (err) {
+      // Provavelmente alguém reservou esse horário um instante antes.
+      setErrorMsg(err.message || "Não foi possível confirmar o agendamento. Tente outro horário.");
+      setStep(2);
+      setTime(null);
+      fetchAvailability(date).then(setSlots).catch(() => {});
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   return (
     <div className="kn-shell">
-      <div style={{ display: "flex", alignItems: "center", gap: 6, cursor: "pointer", marginBottom: 18, color: "var(--ink-soft)", fontSize: 13.5, fontWeight: 600 }} onClick={goBack}>
+      <div
+        style={{ display: "flex", alignItems: "center", gap: 6, cursor: "pointer", marginBottom: 18, color: "var(--ink-soft)", fontSize: 13.5, fontWeight: 600 }}
+        onClick={goBack}
+      >
         <ChevronLeft size={16} /> Voltar
       </div>
 
@@ -63,7 +132,7 @@ export default function Booking({ onBack }) {
           <>
             <div className="kn-card-title">Escolha a data</div>
             <div className="kn-card-sub">Selecione o dia em que deseja jogar.</div>
-            <DatePicker selected={date} onSelect={setDate} />
+            <DatePicker selected={date} onSelect={setDate} openWeekdays={openWeekdays} />
           </>
         )}
 
@@ -71,7 +140,7 @@ export default function Booking({ onBack }) {
           <>
             <div className="kn-card-title">Escolha o horário</div>
             <div className="kn-card-sub">{date && formatDateLabel(date)} — horários disponíveis para a quadra.</div>
-            <TimeSlotGrid date={date} selected={time} onSelect={setTime} />
+            <TimeSlotGrid slots={slots} loading={slotsLoading} selected={time} onSelect={setTime} />
           </>
         )}
 
@@ -79,7 +148,7 @@ export default function Booking({ onBack }) {
           <>
             <div className="kn-card-title">Escolha o pacote</div>
             <div className="kn-card-sub">Planos e pacotes disponíveis para essa reserva.</div>
-            <ProductList selected={product} onSelect={setProduct} />
+            <ProductList products={products} loading={productsLoading} selected={product} onSelect={setProduct} />
           </>
         )}
 
@@ -106,6 +175,8 @@ export default function Booking({ onBack }) {
           </>
         )}
 
+        {errorMsg && <div style={{ color: "#C1443C", fontSize: 13, marginTop: 12 }}>{errorMsg}</div>}
+
         <div className="kn-nav-row">
           {step < 5 && (
             <button className="kn-btn kn-btn-primary" disabled={!canContinue} onClick={() => setStep((s) => s + 1)}>
@@ -113,8 +184,8 @@ export default function Booking({ onBack }) {
             </button>
           )}
           {step === 5 && (
-            <button className="kn-btn kn-btn-primary" onClick={() => setConfirmed(true)}>
-              Confirmar agendamento
+            <button className="kn-btn kn-btn-primary" disabled={submitting} onClick={handleConfirm}>
+              {submitting ? "Confirmando..." : "Confirmar agendamento"}
             </button>
           )}
         </div>

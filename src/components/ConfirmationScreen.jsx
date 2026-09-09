@@ -1,12 +1,12 @@
-import { WHATSAPP_TEMPLATE, fillTemplate, formatDateLabel } from "../data/courtData";
+import { fillTemplate, formatDateLabel } from "../data/courtData";
 
 function formatBRL(n) {
   return n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }
 
-export default function ConfirmationScreen({ booking, onReset }) {
+export default function ConfirmationScreen({ booking, whatsappTemplate, onReset }) {
   const { date, time, product, client } = booking;
-  const message = fillTemplate(WHATSAPP_TEMPLATE, {
+  const message = fillTemplate(whatsappTemplate, {
     nome: client.nome,
     data: date.toLocaleDateString("pt-BR"),
     horario: time,

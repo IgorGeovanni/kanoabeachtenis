@@ -180,8 +180,8 @@ language sql stable security definer as $$
     )
   from (
     select generate_series(
-             make_time(cs.start_hour, 0, 0),
-             make_time(cs.end_hour - 1, 0, 0),
+             date '2000-01-01' + make_time(cs.start_hour, 0, 0),
+             date '2000-01-01' + make_time(cs.end_hour - 1, 0, 0),
              interval '1 hour'
            )::time as slot_time,
            cs.label

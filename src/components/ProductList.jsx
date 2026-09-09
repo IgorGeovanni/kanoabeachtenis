@@ -1,13 +1,15 @@
-import { PRODUCTS } from "../data/courtData";
-
 function formatBRL(n) {
   return n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }
 
-export default function ProductList({ selected, onSelect }) {
+// Agora puramente visual: recebe a lista de planos já carregada do banco.
+export default function ProductList({ products, loading, selected, onSelect }) {
+  if (loading) {
+    return <div className="kn-card-sub" style={{ padding: "10px 0" }}>Carregando pacotes...</div>;
+  }
   return (
     <div className="kn-product-list">
-      {PRODUCTS.map((p) => (
+      {products.map((p) => (
         <div key={p.id} className={`kn-product ${selected?.id === p.id ? "active" : ""}`} onClick={() => onSelect(p)}>
           <div>
             <div className="kn-product-name">{p.name}</div>
