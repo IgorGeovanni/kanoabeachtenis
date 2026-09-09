@@ -1,4 +1,3 @@
-[README.md](https://github.com/user-attachments/files/32028210/README.md)
 # Kanoa — Agendamento de Quadra
 
 Página pública onde o cliente escolhe data, horário e pacote para agendar a

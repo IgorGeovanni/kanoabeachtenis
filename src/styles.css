@@ -1,0 +1,162 @@
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@500;700;800&family=Inter:wght@400;500;600;700&display=swap');
+
+:root {
+  --bg: #F7F3EE;
+  --surface: #FFFFFF;
+  --ink: #1E1B18;
+  --ink-soft: #6B6259;
+  --ink-faint: #A39A8E;
+  --border: #E7E0D6;
+  --wood: #CDAF95;
+  --wood-soft: #F0E4D6;
+  --accent: #C8935C;
+  --accent-deep: #A8703C;
+  --accent-ink: #2C1B0C;
+  --success: #2E8B57;
+  --success-soft: #E4F3EA;
+  --danger: #C1443C;
+  --font-display: 'Manrope', sans-serif;
+  --font-body: 'Inter', sans-serif;
+}
+
+* { box-sizing: border-box; }
+
+html, body, #root { height: 100%; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+}
+
+.kn-app { min-height: 100%; display: flex; flex-direction: column; }
+
+.kn-header {
+  display: flex; align-items: center; gap: 12px;
+  padding: 18px 24px; border-bottom: 1px solid var(--border); background: var(--surface);
+}
+.kn-logo { width: 42px; height: 42px; border-radius: 12px; overflow: hidden; flex-shrink: 0; }
+.kn-logo img { width: 100%; height: 100%; object-fit: cover; }
+.kn-brand-name { font-family: var(--font-display); font-weight: 800; font-size: 16px; }
+.kn-brand-tag { font-size: 11.5px; color: var(--ink-soft); margin-top: 1px; }
+
+.kn-main { flex: 1; display: flex; flex-direction: column; align-items: center; padding: 32px 18px 60px; }
+.kn-shell { width: 100%; max-width: 560px; }
+
+/* ---------- Landing ---------- */
+.kn-hero { text-align: center; padding: 30px 20px 42px; }
+.kn-hero-logo { width: 128px; height: 128px; border-radius: 22px; overflow: hidden; margin: 0 auto 22px; box-shadow: 0 10px 30px rgba(30,27,24,.14); }
+.kn-hero-logo img { width: 100%; height: 100%; object-fit: cover; }
+.kn-hero-title { font-family: var(--font-display); font-weight: 800; font-size: 26px; margin-bottom: 6px; }
+.kn-hero-sub { color: var(--ink-soft); font-size: 14.5px; }
+
+.kn-choice-grid { display: flex; flex-direction: column; gap: 14px; margin-top: 30px; }
+.kn-choice-card {
+  display: flex; align-items: center; gap: 16px; padding: 20px; border-radius: 16px;
+  border: 1.5px solid var(--border); background: var(--surface); cursor: pointer;
+  transition: border-color .15s ease, transform .12s ease;
+  text-align: left;
+}
+.kn-choice-card:hover { border-color: var(--accent); transform: translateY(-2px); }
+.kn-choice-icon {
+  width: 48px; height: 48px; border-radius: 12px; background: var(--wood-soft); color: var(--accent-deep);
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+.kn-choice-title { font-family: var(--font-display); font-weight: 700; font-size: 15.5px; }
+.kn-choice-sub { font-size: 13px; color: var(--ink-soft); margin-top: 2px; }
+
+.kn-note-box {
+  margin-top: 16px; padding: 12px 14px; border-radius: 10px; background: var(--wood-soft);
+  color: var(--accent-deep); font-size: 13px; font-weight: 600;
+}
+
+/* ---------- Steps ---------- */
+.kn-steps { display: flex; align-items: center; justify-content: space-between; margin-bottom: 26px; }
+.kn-step { display: flex; flex-direction: column; align-items: center; gap: 6px; flex: 1; position: relative; }
+.kn-step-dot {
+  width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: 700; background: var(--border); color: var(--ink-faint);
+}
+.kn-step.done .kn-step-dot { background: var(--success); color: #fff; }
+.kn-step.active .kn-step-dot { background: var(--accent); color: var(--accent-ink); }
+.kn-step-label { font-size: 10.5px; color: var(--ink-soft); text-align: center; }
+.kn-step-line { position: absolute; top: 13px; left: 50%; width: 100%; height: 2px; background: var(--border); z-index: -1; }
+.kn-step.done .kn-step-line { background: var(--success); }
+
+.kn-card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 22px; }
+.kn-card-title { font-family: var(--font-display); font-weight: 800; font-size: 17px; margin-bottom: 4px; }
+.kn-card-sub { font-size: 13px; color: var(--ink-soft); margin-bottom: 18px; }
+
+/* ---------- Date picker ---------- */
+.kn-date-row { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 6px; }
+.kn-date-chip {
+  flex-shrink: 0; width: 56px; padding: 10px 0; border-radius: 12px; border: 1.5px solid var(--border);
+  text-align: center; cursor: pointer; background: var(--surface);
+}
+.kn-date-chip .dow { font-size: 10.5px; color: var(--ink-soft); text-transform: capitalize; }
+.kn-date-chip .num { font-family: var(--font-display); font-weight: 800; font-size: 16px; margin-top: 2px; }
+.kn-date-chip.active { border-color: var(--accent); background: var(--wood-soft); }
+.kn-date-chip.closed { opacity: .4; cursor: not-allowed; }
+
+/* ---------- Time slots ---------- */
+.kn-slot-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+.kn-slot {
+  padding: 11px 0; text-align: center; border-radius: 10px; border: 1.5px solid var(--border);
+  font-weight: 700; font-size: 13.5px; cursor: pointer; background: var(--surface);
+}
+.kn-slot.busy { color: var(--ink-faint); background: var(--bg); cursor: not-allowed; border-style: dashed; }
+.kn-slot.active { border-color: var(--accent); background: var(--accent); color: var(--accent-ink); }
+
+/* ---------- Products ---------- */
+.kn-product-list { display: flex; flex-direction: column; gap: 10px; }
+.kn-product {
+  display: flex; justify-content: space-between; align-items: center; padding: 16px; border-radius: 12px;
+  border: 1.5px solid var(--border); cursor: pointer; background: var(--surface);
+}
+.kn-product.active { border-color: var(--accent); background: var(--wood-soft); }
+.kn-product-name { font-weight: 700; font-size: 14.5px; }
+.kn-product-desc { font-size: 12.5px; color: var(--ink-soft); margin-top: 2px; }
+.kn-product-price { font-family: var(--font-display); font-weight: 800; font-size: 15px; white-space: nowrap; }
+
+/* ---------- Form ---------- */
+.kn-field { margin-bottom: 16px; }
+.kn-label { font-size: 12.5px; font-weight: 700; color: var(--ink-soft); margin-bottom: 6px; display: block; }
+.kn-input {
+  width: 100%; padding: 12px 13px; border: 1.5px solid var(--border); border-radius: 10px;
+  font-size: 14.5px; font-family: var(--font-body); background: var(--surface); color: var(--ink);
+}
+.kn-input:focus { outline: 2px solid var(--accent); outline-offset: 1px; border-color: var(--accent); }
+.kn-more-toggle { font-size: 13.5px; font-weight: 700; color: var(--accent-deep); cursor: pointer; margin-bottom: 4px; }
+
+/* ---------- Summary / Confirmation ---------- */
+.kn-summary-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--border); font-size: 14px; }
+.kn-summary-row:last-child { border-bottom: none; }
+.kn-summary-label { color: var(--ink-soft); }
+.kn-summary-value { font-weight: 700; }
+
+.kn-success-icon {
+  width: 62px; height: 62px; border-radius: 50%; background: var(--success-soft); color: var(--success);
+  display: flex; align-items: center; justify-content: center; margin: 0 auto 16px;
+}
+.kn-whatsapp-preview {
+  background: var(--wood-soft); border-radius: 12px; padding: 14px 16px; font-size: 13.5px;
+  color: var(--accent-ink); margin-top: 16px; line-height: 1.5;
+}
+
+/* ---------- Buttons / Nav ---------- */
+.kn-nav-row { display: flex; gap: 10px; margin-top: 22px; }
+.kn-btn {
+  flex: 1; padding: 13px 18px; border-radius: 12px; border: 1.5px solid transparent; font-weight: 700;
+  font-size: 14.5px; cursor: pointer; font-family: var(--font-body); text-align: center;
+}
+.kn-btn:disabled { opacity: .45; cursor: not-allowed; }
+.kn-btn-primary { background: var(--accent); color: var(--accent-ink); }
+.kn-btn-ghost { background: var(--surface); border-color: var(--border); color: var(--ink); }
+
+.kn-footer { text-align: center; padding: 18px; font-size: 11.5px; color: var(--ink-faint); }
+
+@media (max-width: 420px) {
+  .kn-slot-grid { grid-template-columns: repeat(3, 1fr); }
+}
