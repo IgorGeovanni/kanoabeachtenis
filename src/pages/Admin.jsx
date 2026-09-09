@@ -1,0 +1,1513 @@
+import { useState, Fragment } from "react";
+import {
+  LayoutDashboard, CalendarDays, Users, ClipboardList, UtensilsCrossed,
+  Table2, ShoppingCart, FileBarChart, Settings, Search, Phone,
+  MessageCircle, ChevronLeft, Plus, Minus, X, Menu, Printer
+} from "lucide-react";
+import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip, CartesianGrid } from "recharts";
+
+/* =========================================================================
+   CONFIGURAÇÃO DA MARCA — troque aqui quando a logo/identidade chegar.
+   Nome, cores e inicial do logo ficam centralizados neste único bloco.
+   ========================================================================= */
+const BRAND = {
+  name: "Kanoa",
+  short: "Kanoa",
+  initial: "K",
+  // Logo enviada pelo cliente — placa em madeira. Embutida em base64 (versão
+  // reduzida) só para este protótipo funcionar como arquivo único; no projeto
+  // real ela vive como um arquivo de imagem normal em src/assets.
+  logo: "data:image/jpeg;base64,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",
+};
+
+const CSS = `
+  :root {
+    --bg:#F5F3EE; --surface:#FFFFFF; --surface-alt:#FBFAF6;
+    --ink:#1C2430; --ink-soft:#636B78; --ink-faint:#9CA3AE; --border:#E4E1D8;
+    --sidebar:#1E1B18; --sidebar-alt:#2A2622; --sidebar-text:#D8D0C6; --sidebar-text-dim:#8C8378;
+    --brand:#C8935C; --brand-deep:#A8703C; --brand-ink:#2C1B0C; --wood:#CDAF95;
+    --court:#1F7A6C; --court-soft:#E4F1EE;
+    --bar:#A6472F; --bar-soft:#F3E4DE;
+    --success:#2E8B57; --success-soft:#E4F3EA;
+    --danger:#C1443C; --danger-soft:#FBEAE8;
+    --warning:#E2A63B; --warning-soft:#FBF1DD;
+    --info:#3A6EA5; --info-soft:#E6EEF6;
+    --font-display:'Manrope',sans-serif; --font-body:'Inter',sans-serif;
+  }
+  @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@500;700;800&family=Inter:wght@400;500;600;700&display=swap');
+  .bt-app{ display:flex; min-height:100vh; font-family:var(--font-body); background:var(--bg); color:var(--ink); position:relative; }
+  .bt-app *{ box-sizing:border-box; }
+  .bt-sidebar{ width:236px; background:var(--sidebar); color:var(--sidebar-text); flex-shrink:0; display:flex; flex-direction:column; padding:18px 12px; z-index:30; }
+  .bt-sidebar-brand{ display:flex; align-items:center; gap:10px; padding:6px 8px 20px; border-bottom:1px solid rgba(255,255,255,.08); margin-bottom:14px; }
+  .bt-logo-badge{ width:38px;height:38px;border-radius:11px;background:var(--brand);color:var(--brand-ink);display:flex;align-items:center;justify-content:center;font-family:var(--font-display);font-weight:800;font-size:17px; flex-shrink:0; overflow:hidden; }
+  .bt-logo-badge img{ width:100%; height:100%; object-fit:cover; }
+  .bt-logo-badge.lg{ width:64px; height:64px; border-radius:14px; }
+  .bt-brand-name{ font-family:var(--font-display); font-weight:700; font-size:14px; color:#fff; line-height:1.25; }
+  .bt-brand-tag{ font-size:10.5px; color:var(--sidebar-text-dim); margin-top:1px; }
+  .bt-nav-group{ margin-bottom:14px; }
+  .bt-nav-group-label{ font-size:10.5px; letter-spacing:.05em; color:var(--sidebar-text-dim); padding:0 10px 6px; font-weight:700; }
+  .bt-nav-item{ display:flex; align-items:center; gap:10px; padding:9px 10px; border-radius:9px; font-size:13.5px; color:var(--sidebar-text); cursor:pointer; margin-bottom:2px; }
+  .bt-nav-item:hover{ background:var(--sidebar-alt); color:#fff; }
+  .bt-nav-item.active{ background:var(--brand); color:var(--brand-ink); font-weight:700; }
+  .bt-nav-item svg{ width:16px;height:16px; flex-shrink:0; }
+  .bt-sidebar-foot{ margin-top:auto; padding:10px; font-size:11px; color:var(--sidebar-text-dim); border-top:1px solid rgba(255,255,255,.08); }
+  .bt-main{ flex:1; display:flex; flex-direction:column; min-width:0; }
+  .bt-topbar{ height:64px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; padding:0 26px; background:var(--surface); flex-shrink:0; gap:14px; }
+  .bt-topbar-left{ display:flex; align-items:center; gap:12px; min-width:0; }
+  .bt-topbar-title{ font-family:var(--font-display); font-weight:800; font-size:17px; }
+  .bt-topbar-sub{ font-size:12px; color:var(--ink-soft); margin-top:1px; }
+  .bt-content{ padding:24px 26px 40px; overflow-y:auto; flex:1; }
+  .bt-menu-btn{ display:none; align-items:center; justify-content:center; width:34px;height:34px;border-radius:8px;border:1px solid var(--border);background:var(--surface);cursor:pointer; flex-shrink:0; }
+  .bt-card{ background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:18px; }
+  .bt-card-title{ font-family:var(--font-display); font-weight:800; font-size:14.5px; }
+  .bt-card-sub{ font-size:12px; color:var(--ink-soft); margin-top:2px; }
+  .bt-row{ display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; }
+  .bt-btn{ display:inline-flex; align-items:center; gap:6px; font-size:13px; font-weight:700; padding:8px 14px; border-radius:9px; border:1px solid transparent; cursor:pointer; font-family:var(--font-body); white-space:nowrap; }
+  .bt-btn-primary{ background:var(--brand); color:var(--brand-ink); }
+  .bt-btn-primary:hover{ background:var(--brand-deep); }
+  .bt-btn-ghost{ background:transparent; border-color:var(--border); color:var(--ink); }
+  .bt-btn-ghost:hover{ background:var(--surface-alt); }
+  .bt-btn-danger{ background:var(--danger-soft); color:var(--danger); }
+  .bt-btn-sm{ padding:5px 10px; font-size:12px; border-radius:7px; }
+  .bt-badge{ display:inline-flex; align-items:center; gap:5px; font-size:11px; font-weight:700; padding:3px 9px; border-radius:999px; white-space:nowrap; }
+  .bt-badge-success{ background:var(--success-soft); color:var(--success); }
+  .bt-badge-danger{ background:var(--danger-soft); color:var(--danger); }
+  .bt-badge-warning{ background:var(--warning-soft); color:#8A5F0F; }
+  .bt-badge-court{ background:var(--court-soft); color:var(--court); }
+  .bt-badge-bar{ background:var(--bar-soft); color:var(--bar); }
+  .bt-badge-muted{ background:var(--surface-alt); color:var(--ink-soft); border:1px solid var(--border); }
+  .bt-input,.bt-select,.bt-textarea{ width:100%; padding:9px 11px; border:1px solid var(--border); border-radius:8px; font-size:13.5px; font-family:var(--font-body); background:var(--surface); color:var(--ink); }
+  .bt-input:focus,.bt-textarea:focus,.bt-select:focus{ outline:2px solid var(--brand); outline-offset:1px; border-color:var(--brand); }
+  .bt-label{ font-size:12px; font-weight:700; color:var(--ink-soft); margin-bottom:5px; display:block; }
+  .bt-field{ margin-bottom:14px; }
+  .bt-table{ width:100%; border-collapse:collapse; font-size:13.5px; }
+  .bt-table th{ text-align:left; font-size:11px; text-transform:uppercase; letter-spacing:.03em; color:var(--ink-faint); font-weight:700; padding:9px 12px; border-bottom:1px solid var(--border); }
+  .bt-table td{ padding:11px 12px; border-bottom:1px solid var(--border); vertical-align:middle; }
+  .bt-table tr:hover td{ background:var(--surface-alt); }
+  .bt-toast{ position:fixed; bottom:22px; right:22px; background:var(--ink); color:#fff; padding:11px 18px; border-radius:10px; font-size:13px; z-index:200; box-shadow:0 8px 24px rgba(0,0,0,.2); max-width:320px; }
+  .bt-overlay{ position:fixed; inset:0; background:rgba(20,33,54,.35); z-index:25; }
+  .bt-occ-strip{ display:flex; gap:3px; margin-top:14px; }
+  .bt-occ-block{ flex:1; height:34px; border-radius:5px; background:var(--border); }
+  .bt-occ-block.busy{ background:var(--court); }
+  .bt-occ-labels{ display:flex; gap:3px; margin-top:6px; }
+  .bt-occ-labels span{ flex:1; text-align:center; font-size:9.5px; color:var(--ink-faint); }
+  .bt-stat-grid{ display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:14px; }
+  .bt-stat-value{ font-family:var(--font-display); font-size:25px; font-weight:800; margin-top:6px; }
+  .bt-stat-label{ font-size:12px; color:var(--ink-soft); }
+  .bt-stat-pending{ border-style:dashed; background:var(--surface-alt); }
+  .bt-tables-grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(148px,1fr)); gap:13px; }
+  .bt-table-card{ border:1.6px solid var(--border); border-radius:12px; padding:12px; cursor:pointer; background:var(--surface); transition:transform .12s ease, box-shadow .12s ease; }
+  .bt-table-card:hover{ transform:translateY(-2px); box-shadow:0 8px 18px rgba(20,33,54,.09); }
+  .bt-table-card.st-ocupada{ border-color:var(--brand); background:var(--warning-soft); }
+  .bt-table-card.st-atendimento{ border-color:var(--court); background:var(--court-soft); }
+  .bt-table-card.st-aguardando{ border-color:var(--info); background:var(--info-soft); }
+  .bt-table-num{ font-family:var(--font-display); font-weight:800; font-size:15px; }
+  .bt-panel-overlay{ position:fixed; inset:0; background:rgba(20,33,54,.38); z-index:60; display:flex; justify-content:flex-end; }
+  .bt-panel{ width:430px; max-width:92vw; background:var(--surface); height:100%; overflow-y:auto; padding:22px; box-shadow:-10px 0 30px rgba(0,0,0,.18); }
+  .bt-item-row{ display:flex; justify-content:space-between; align-items:center; padding:9px 0; border-bottom:1px solid var(--border); font-size:13.5px; gap:8px; }
+  .bt-qty-btn{ width:22px;height:22px;border-radius:6px;border:1px solid var(--border);background:var(--surface-alt);cursor:pointer;font-size:13px;line-height:1;display:inline-flex;align-items:center;justify-content:center; }
+  .bt-tabs{ display:flex; gap:4px; border-bottom:1px solid var(--border); margin-bottom:16px; }
+  .bt-tab{ padding:9px 14px; font-size:13px; font-weight:700; color:var(--ink-soft); cursor:pointer; border-bottom:2px solid transparent; }
+  .bt-tab.active{ color:var(--ink); border-color:var(--brand); }
+  .bt-chip{ display:inline-flex; align-items:center; padding:6px 12px; border-radius:999px; border:1px solid var(--border); font-size:12px; cursor:pointer; background:var(--surface); font-weight:600; }
+  .bt-chip.active{ background:var(--ink); color:#fff; border-color:var(--ink); }
+  .bt-var-chip{ font-size:11px; font-family:monospace; background:var(--surface-alt); border:1px solid var(--border); padding:3px 8px; border-radius:6px; cursor:pointer; }
+  .bt-grid-2{ display:grid; grid-template-columns:1.4fr 1fr; gap:16px; }
+  .bt-grid-3{ display:grid; grid-template-columns:repeat(3,1fr); gap:16px; }
+  .bt-bar-mini{ height:8px; border-radius:5px; background:var(--court); }
+  .bt-bar-track{ height:8px; border-radius:5px; background:var(--border); flex:1; }
+  .bt-avatar{ width:34px;height:34px;border-radius:50%; background:var(--court-soft); color:var(--court); display:flex; align-items:center; justify-content:center; font-weight:800; font-size:13px; font-family:var(--font-display); flex-shrink:0; }
+  .bt-photo-ph{ width:100%; height:96px; border-radius:10px; display:flex; align-items:center; justify-content:center; margin-bottom:10px; }
+  @media (max-width: 900px){
+    .bt-grid-2, .bt-grid-3{ grid-template-columns:1fr; }
+    .bt-sidebar{ position:fixed; left:0; top:0; bottom:0; transform:translateX(-100%); transition:transform .2s ease; }
+    .bt-sidebar.open{ transform:translateX(0); }
+    .bt-menu-btn{ display:inline-flex; }
+  }
+`;
+
+/* =========================================================================
+   DADOS FICTÍCIOS (mock) — somente para visualização do protótipo.
+   Nada aqui é persistido; na versão real virão do Supabase.
+   ========================================================================= */
+const CLIENTS = [
+  { id: 1, name: "João da Silva", phone: "(17) 99123-4501", cpf: "123.456.789-00", birthdate: "12/04/1990", status: "ativo", quadraReservas: 22, quadraGasto: 2400, mesasAtendimentos: 8, mesasConsumo: 1850, ultimaVisita: "08/09/2026", clube: { ativo: true, pago: true, dataPagamento: "01/09/2026", referencia: "Setembro/2026", valor: 220 } },
+  { id: 2, name: "Maria Fernandes", phone: "(17) 99234-5502", cpf: null, birthdate: null, status: "ativo", quadraReservas: 15, quadraGasto: 1680, mesasAtendimentos: 3, mesasConsumo: 420, ultimaVisita: "06/09/2026", clube: null },
+  { id: 3, name: "Carlos Eduardo", phone: "(17) 99345-6503", cpf: "234.567.890-11", birthdate: "02/11/1985", status: "ativo", quadraReservas: 9, quadraGasto: 990, mesasAtendimentos: 12, mesasConsumo: 2870, ultimaVisita: "09/09/2026", clube: null },
+  { id: 4, name: "Fernanda Lima", phone: "(17) 99456-7504", cpf: null, birthdate: null, status: "inativo", quadraReservas: 4, quadraGasto: 320, mesasAtendimentos: 1, mesasConsumo: 95, ultimaVisita: "14/06/2026", clube: null },
+  { id: 5, name: "Rafael Costa", phone: "(17) 99567-8505", cpf: "345.678.901-22", birthdate: "27/02/1993", status: "ativo", quadraReservas: 31, quadraGasto: 3720, mesasAtendimentos: 19, mesasConsumo: 4210, ultimaVisita: "09/09/2026", clube: { ativo: true, pago: false, dataPagamento: null, referencia: "Setembro/2026", valor: 220 } },
+  { id: 6, name: "Patrícia Souza", phone: "(17) 99678-9506", cpf: null, birthdate: null, status: "ativo", quadraReservas: 6, quadraGasto: 540, mesasAtendimentos: 5, mesasConsumo: 610, ultimaVisita: "05/09/2026", clube: null },
+];
+
+const PRODUCTS_COURT_INIT = [
+  { id: 1, name: "Day Use", desc: "Acesso avulso à quadra por 1 hora", price: 80, status: "ativo" },
+  { id: 2, name: "Aula Individual", desc: "Aula particular de 1 hora com professor", price: 120, status: "ativo" },
+  { id: 3, name: "Pacote Mensal", desc: "4 sessões semanais recorrentes", price: 450, status: "ativo" },
+  { id: 4, name: "Pacote Semanal", desc: "1 sessão semanal recorrente", price: 150, status: "ativo" },
+  { id: 5, name: "Aluguel Avulso (2h)", desc: "Reserva avulsa de 2 horas", price: 150, status: "inativo" },
+];
+
+const PRODUCTS_BAR_INIT = [
+  { id: 1, name: "Água Mineral", desc: "500ml, com ou sem gás", price: 6, cat: "Bebidas", status: "ativo" },
+  { id: 2, name: "Refrigerante Lata", desc: "350ml", price: 8, cat: "Bebidas", status: "ativo" },
+  { id: 3, name: "Cerveja Long Neck", desc: "330ml, gelada", price: 12, cat: "Bebidas", status: "ativo" },
+  { id: 4, name: "Suco Natural", desc: "Copo 400ml, sabores variados", price: 14, cat: "Bebidas", status: "ativo" },
+  { id: 5, name: "Batata Frita", desc: "Porção para 2 pessoas", price: 38, cat: "Porções", status: "ativo" },
+  { id: 6, name: "Isca de Peixe", desc: "Porção com molho tártaro", price: 46, cat: "Porções", status: "ativo" },
+  { id: 7, name: "Misto Quente", desc: "Pão, queijo e presunto", price: 22, cat: "Lanches", status: "ativo" },
+  { id: 8, name: "Açaí na Tigela", desc: "300ml com granola e banana", price: 18, cat: "Sobremesas", status: "inativo" },
+];
+
+// Quadra funciona por turnos, com intervalos entre eles — e cada dia da
+// semana pode ter turnos diferentes (ex.: domingo mais curto que os demais
+// dias). Isso é configurável em Configurações > Agenda, por dia.
+const DAYS_OF_WEEK = [
+  { id: 0, short: "Dom", label: "Domingo" },
+  { id: 1, short: "Seg", label: "Segunda" },
+  { id: 2, short: "Ter", label: "Terça" },
+  { id: 3, short: "Qua", label: "Quarta" },
+  { id: 4, short: "Qui", label: "Quinta" },
+  { id: 5, short: "Sex", label: "Sexta" },
+  { id: 6, short: "Sáb", label: "Sábado" },
+];
+
+function defaultWeekShifts() {
+  return [
+    { id: `t-${Math.random().toString(36).slice(2, 8)}`, label: "Manhã", start: 8, end: 11 },
+    { id: `t-${Math.random().toString(36).slice(2, 8)}`, label: "Tarde", start: 13, end: 17 },
+    { id: `t-${Math.random().toString(36).slice(2, 8)}`, label: "Noite", start: 18, end: 22 },
+  ];
+}
+
+// 0=Domingo ... 6=Sábado, igual ao Date.getDay() do JavaScript.
+const SCHEDULE_INIT = {
+  0: [{ id: "dom-manha", label: "Manhã", start: 8, end: 12 }], // domingo: turno único e mais curto
+  1: defaultWeekShifts(),
+  2: defaultWeekShifts(),
+  3: defaultWeekShifts(),
+  4: defaultWeekShifts(),
+  5: defaultWeekShifts(),
+  6: defaultWeekShifts(),
+};
+
+function buildSlotsFromShifts(shifts) {
+  const slots = [];
+  shifts.forEach((shift) => {
+    for (let h = shift.start; h < shift.end; h++) {
+      slots.push({ hour: `${String(h).padStart(2, "0")}:00`, shift: shift.label, shiftId: shift.id });
+    }
+  });
+  return slots;
+}
+
+// "Hoje", no protótipo, é fixado numa quarta-feira (09/09/2026) — mesmo
+// formato de turnos que segunda a sábado, só domingo é diferente.
+const TODAY_DAY_INDEX = 3;
+const SLOTS = buildSlotsFromShifts(SCHEDULE_INIT[TODAY_DAY_INDEX]);
+const HOURS = SLOTS.map((s) => s.hour);
+// índices ocupados hoje, dentro do array HOURS acima (08,09,10 · 13,14,15,16 · 18,19,20,21)
+const BUSY_HOURS = new Set([1, 2, 4, 5, 6, 8, 9]);
+
+const BOOKING_TYPES = {
+  avulso: { label: "Avulso", cls: "bt-badge-muted" },
+  plano: { label: "Plano", cls: "bt-badge-court" },
+  clube: { label: "Clube", cls: "bt-badge-warning" },
+};
+
+const PEAK_DATA = [
+  { hour: "08h", reservas: 1 }, { hour: "09h", reservas: 2 }, { hour: "10h", reservas: 2 },
+  { hour: "13h", reservas: 3 }, { hour: "14h", reservas: 2 }, { hour: "15h", reservas: 1 }, { hour: "16h", reservas: 4 },
+  { hour: "18h", reservas: 7 }, { hour: "19h", reservas: 9 }, { hour: "20h", reservas: 8 }, { hour: "21h", reservas: 5 },
+];
+
+const WEEK_DEMAND = [
+  { dia: "Seg", valor: 38 }, { dia: "Ter", valor: 42 }, { dia: "Qua", valor: 40 },
+  { dia: "Qui", valor: 47 }, { dia: "Sex", valor: 68 }, { dia: "Sáb", valor: 92 }, { dia: "Dom", valor: 81 },
+];
+
+const TABLE_ITEMS = {
+  1: [ { produto: "Batata Frita", qtd: 2, preco: 38 }, { produto: "Refrigerante Lata", qtd: 3, preco: 8 }, { produto: "Água Mineral", qtd: 2, preco: 6 }, { produto: "Suco Natural", qtd: 1, preco: 14 } ],
+  3: [ { produto: "Isca de Peixe", qtd: 1, preco: 46 }, { produto: "Suco Natural", qtd: 2, preco: 14 }, { produto: "Água Mineral", qtd: 1, preco: 6 } ],
+  5: [ { produto: "Cerveja Long Neck", qtd: 6, preco: 12 }, { produto: "Batata Frita", qtd: 2, preco: 38 }, { produto: "Misto Quente", qtd: 2, preco: 22 }, { produto: "Água Mineral", qtd: 2, preco: 6 } ],
+  8: [ { produto: "Isca de Peixe", qtd: 2, preco: 46 }, { produto: "Cerveja Long Neck", qtd: 4, preco: 12 }, { produto: "Batata Frita", qtd: 1, preco: 38 }, { produto: "Água Mineral", qtd: 4, preco: 6 } ],
+  10: [ { produto: "Refrigerante Lata", qtd: 2, preco: 8 }, { produto: "Água Mineral", qtd: 2, preco: 6 }, { produto: "Misto Quente", qtd: 1, preco: 22 } ],
+  13: [ { produto: "Refrigerante Lata", qtd: 4, preco: 8 }, { produto: "Batata Frita", qtd: 2, preco: 38 }, { produto: "Água Mineral", qtd: 6, preco: 6 }, { produto: "Isca de Peixe", qtd: 1, preco: 46 } ],
+};
+
+const TABLES_INIT = [
+  { id: 1, status: "ocupada", cliente: "João da Silva", telefone: "(17) 99123-4501", pessoas: 3, aberta: "19:10", valor: 126 },
+  { id: 2, status: "livre" },
+  { id: 3, status: "ocupada", cliente: "Maria Fernandes", telefone: "(17) 99234-5502", pessoas: 2, aberta: "19:45", valor: 80 },
+  { id: 4, status: "livre" },
+  { id: 5, status: "atendimento", cliente: "Rafael Costa", telefone: "(17) 99567-8505", pessoas: 5, aberta: "18:30", valor: 204 },
+  { id: 6, status: "livre" },
+  { id: 7, status: "livre" },
+  { id: 8, status: "aguardando", cliente: "Carlos Eduardo", telefone: "(17) 99345-6503", pessoas: 4, aberta: "18:05", valor: 202 },
+  { id: 9, status: "livre" },
+  { id: 10, status: "ocupada", cliente: null, telefone: null, pessoas: 2, aberta: "20:00", valor: 50 },
+  { id: 11, status: "livre" },
+  { id: 12, status: "livre" },
+  { id: 13, status: "ocupada", cliente: "Patrícia Souza", telefone: "(17) 99678-9506", pessoas: 6, aberta: "19:20", valor: 190 },
+  { id: 14, status: "livre" },
+  { id: 15, status: "livre" },
+  { id: 16, status: "livre" },
+];
+
+const SALES = [
+  { id: 1, data: "09/09/2026", cliente: "Rafael Costa", produto: "Pacote Mensal", valor: 450, tipo: "Recorrente" },
+  { id: 2, data: "09/09/2026", cliente: "João da Silva", produto: "Day Use", valor: 80, tipo: "Avulso" },
+  { id: 3, data: "08/09/2026", cliente: "Carlos Eduardo", produto: "Aula Individual", valor: 120, tipo: "Avulso" },
+  { id: 4, data: "08/09/2026", cliente: "Patrícia Souza", produto: "Pacote Semanal", valor: 150, tipo: "Recorrente" },
+  { id: 5, data: "07/09/2026", cliente: "Maria Fernandes", produto: "Day Use", valor: 80, tipo: "Avulso" },
+  { id: 6, data: "06/09/2026", cliente: "João da Silva", produto: "Day Use", valor: 80, tipo: "Avulso" },
+];
+
+const MODULES_LIST = [
+  "Dashboard", "Agenda", "Agendar Cliente", "Mesas", "Cardápio / Produtos do Bar",
+  "Planos da Quadra", "Clientes (CRM)", "Vendas", "Relatórios", "Configurações", "Funcionários",
+];
+
+const STAFF_INIT = [
+  { id: 1, nome: "Carlos Mendes", usuario: "carlos", status: "ativo", permissoes: ["Mesas", "Agenda", "Agendar Cliente", "Clientes (CRM)"] },
+  { id: 2, nome: "Bianca Alves", usuario: "bianca", status: "ativo", permissoes: ["Agenda", "Agendar Cliente", "Clientes (CRM)", "Vendas"] },
+  { id: 3, nome: "Diego Ramos", usuario: "diego", status: "inativo", permissoes: ["Mesas", "Agenda"] },
+];
+
+const REPORT_GROUPS = [
+  { group: "Quadra", items: ["Agendamentos", "Ocupação", "Produtos e planos", "Vendas"] },
+  { group: "Bar", items: ["Produtos vendidos", "Consumo por período", "Comandas", "Mesas", "Produtos mais vendidos"] },
+  { group: "Clientes", items: ["Clientes cadastrados", "Utilização da quadra", "Consumo no bar", "Relacionamento completo"] },
+];
+
+const NAV_GROUPS = [
+  { label: null, items: [ { id: "dashboard", label: "Dashboard", icon: LayoutDashboard } ] },
+  { label: "Quadra", items: [ { id: "agenda", label: "Agenda", icon: CalendarDays }, { id: "planosQuadra", label: "Planos da Quadra", icon: ClipboardList } ] },
+  { label: "Bar", items: [ { id: "mesas", label: "Mesas", icon: Table2 }, { id: "produtosBar", label: "Cardápio / Produtos", icon: UtensilsCrossed } ] },
+  { label: "Relacionamento", items: [ { id: "clientes", label: "Clientes (CRM)", icon: Users } ] },
+  { label: "Gestão", items: [ { id: "vendas", label: "Vendas", icon: ShoppingCart }, { id: "relatorios", label: "Relatórios", icon: FileBarChart }, { id: "config", label: "Configurações", icon: Settings } ] },
+];
+
+const VIEW_META = {
+  dashboard: { title: "Dashboard", sub: "Visão geral da operação" },
+  agenda: { title: "Agenda", sub: "Reservas e disponibilidade da quadra" },
+  planosQuadra: { title: "Planos da Quadra", sub: "Produtos vendidos para o agendamento da quadra" },
+  mesas: { title: "Mesas", sub: "Controle de mesas e comandas do bar" },
+  produtosBar: { title: "Cardápio / Produtos do Bar", sub: "Itens disponíveis para venda no bar" },
+  clientes: { title: "Clientes", sub: "CRM — relacionamento completo com o cliente" },
+  vendas: { title: "Vendas", sub: "Lançamentos avulsos e recorrentes" },
+  relatorios: { title: "Relatórios", sub: "Estrutura modular, pronta para expansão" },
+  config: { title: "Configurações", sub: "Dados do estabelecimento e preferências" },
+};
+
+function formatBRL(n) {
+  return n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+}
+function initials(name) {
+  if (!name) return "?";
+  const parts = name.trim().split(" ");
+  return (parts[0][0] + (parts[1] ? parts[1][0] : "")).toUpperCase();
+}
+
+/* =========================================================================
+   COMPONENTES DE APOIO
+   ========================================================================= */
+function StatusBadge({ status }) {
+  const map = {
+    ativo: { cls: "bt-badge-success", label: "Ativo" },
+    inativo: { cls: "bt-badge-danger", label: "Inativo" },
+    livre: { cls: "bt-badge-muted", label: "Livre" },
+    ocupada: { cls: "bt-badge-warning", label: "Ocupada" },
+    atendimento: { cls: "bt-badge-court", label: "Em atendimento" },
+    aguardando: { cls: "bt-badge-bar", label: "Aguardando fechamento" },
+  };
+  const m = map[status] || { cls: "bt-badge-muted", label: status };
+  return <span className={`bt-badge ${m.cls}`}>{m.label}</span>;
+}
+
+function Sidebar({ view, setView, open }) {
+  return (
+    <div className={`bt-sidebar ${open ? "open" : ""}`}>
+      <div className="bt-sidebar-brand">
+        <div className="bt-logo-badge"><img src={BRAND.logo} alt={BRAND.name} /></div>
+        <div>
+          <div className="bt-brand-name">{BRAND.name}</div>
+          <div className="bt-brand-tag">Painel administrativo</div>
+        </div>
+      </div>
+      {NAV_GROUPS.map((group, gi) => (
+        <div className="bt-nav-group" key={gi}>
+          {group.label && <div className="bt-nav-group-label">{group.label.toUpperCase()}</div>}
+          {group.items.map((item) => {
+            const Icon = item.icon;
+            return (
+              <div
+                key={item.id}
+                className={`bt-nav-item ${view === item.id ? "active" : ""}`}
+                onClick={() => setView(item.id)}
+              >
+                <Icon />
+                <span>{item.label}</span>
+              </div>
+            );
+          })}
+        </div>
+      ))}
+      <div className="bt-sidebar-foot">Protótipo visual — dados fictícios para referência de layout.</div>
+    </div>
+  );
+}
+
+function TopBar({ view, onMenu, notify }) {
+  const meta = VIEW_META[view];
+  const showAction = view === "dashboard" || view === "agenda";
+  return (
+    <div className="bt-topbar">
+      <div className="bt-topbar-left">
+        <button className="bt-menu-btn" onClick={onMenu}><Menu size={17} /></button>
+        <div>
+          <div className="bt-topbar-title">{meta.title}</div>
+          <div className="bt-topbar-sub">{meta.sub}</div>
+        </div>
+      </div>
+      {showAction && (
+        <button className="bt-btn bt-btn-primary" onClick={() => notify("Abrir novo agendamento — ação ilustrativa do protótipo.")}>
+          <Plus size={15} /> Nova reserva
+        </button>
+      )}
+    </div>
+  );
+}
+
+/* =========================================================================
+   DASHBOARD
+   ========================================================================= */
+function DashboardView({ notify }) {
+  const busyCount = HOURS.filter((_, i) => BUSY_HOURS.has(i)).length;
+  const occPct = Math.round((busyCount / HOURS.length) * 100);
+  const activeClients = CLIENTS.filter((c) => c.status === "ativo").length;
+  const topClients = [...CLIENTS].sort((a, b) => b.quadraReservas - a.quadraReservas).slice(0, 4);
+  const maxWeek = Math.max(...WEEK_DEMAND.map((d) => d.valor));
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
+      <div className="bt-stat-grid">
+        <div className="bt-card">
+          <div className="bt-stat-label">Horas disponíveis no mês</div>
+          <div className="bt-stat-value">434h</div>
+        </div>
+        <div className="bt-card">
+          <div className="bt-stat-label">Horas alugadas no mês</div>
+          <div className="bt-stat-value">278h</div>
+        </div>
+        <div className="bt-card">
+          <div className="bt-stat-label">Ocupação do mês</div>
+          <div className="bt-stat-value">64%</div>
+        </div>
+        <div className="bt-card">
+          <div className="bt-stat-label">Clientes ativos</div>
+          <div className="bt-stat-value">{activeClients}</div>
+        </div>
+      </div>
+
+      <div className="bt-card">
+        <div className="bt-row">
+          <div>
+            <div className="bt-card-title">Ocupação de hoje</div>
+            <div className="bt-card-sub">Turnos: Manhã (08h–11h) · Tarde (13h–17h) · Noite (18h–22h)</div>
+          </div>
+          <span className="bt-badge bt-badge-court">{occPct}% ocupado hoje</span>
+        </div>
+        <div className="bt-occ-strip">
+          {SLOTS.map((s, i) => (
+            <div
+              key={s.hour}
+              className={`bt-occ-block ${BUSY_HOURS.has(i) ? "busy" : ""}`}
+              style={{ marginLeft: i > 0 && s.shiftId !== SLOTS[i - 1].shiftId ? 10 : 0 }}
+            />
+          ))}
+        </div>
+        <div className="bt-occ-labels">
+          {SLOTS.map((s, i) => (
+            <span key={s.hour} style={{ marginLeft: i > 0 && s.shiftId !== SLOTS[i - 1].shiftId ? 10 : 0 }}>{s.hour}</span>
+          ))}
+        </div>
+      </div>
+
+      <div className="bt-grid-2">
+        <div className="bt-card">
+          <div className="bt-card-title">Horários de pico (semana)</div>
+          <div className="bt-card-sub">Quantidade de reservas por horário</div>
+          <div style={{ height: 220, marginTop: 10 }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={PEAK_DATA}>
+                <CartesianGrid vertical={false} stroke="#E4E1D8" />
+                <XAxis dataKey="hour" tick={{ fontSize: 11, fill: "#9CA3AE" }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fontSize: 11, fill: "#9CA3AE" }} axisLine={false} tickLine={false} width={24} />
+                <Tooltip cursor={{ fill: "#F5F3EE" }} contentStyle={{ fontSize: 12, borderRadius: 8 }} />
+                <Bar dataKey="reservas" fill="#1F7A6C" radius={[5, 5, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+          <div className="bt-card">
+            <div className="bt-card-title">Clientes que mais utilizam a quadra</div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 12 }}>
+              {topClients.map((c) => (
+                <div key={c.id} style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <div className="bt-avatar">{initials(c.name)}</div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 13, fontWeight: 600 }}>{c.name}</div>
+                    <div style={{ fontSize: 11.5, color: "var(--ink-soft)" }}>{c.quadraReservas} reservas</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="bt-card">
+            <div className="bt-card-title">Dias com maior demanda</div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 12 }}>
+              {WEEK_DEMAND.map((d) => (
+                <div key={d.dia} style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <span style={{ fontSize: 12, width: 30, color: "var(--ink-soft)" }}>{d.dia}</span>
+                  <div className="bt-bar-track">
+                    <div className="bt-bar-mini" style={{ width: `${(d.valor / maxWeek) * 100}%` }} />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="bt-card bt-stat-pending">
+        <div className="bt-row">
+          <div>
+            <div className="bt-card-title">Receita</div>
+            <div className="bt-card-sub">Faturamento, ticket médio e faturamento por produto aparecerão aqui assim que as regras de cobrança forem definidas.</div>
+          </div>
+          <span className="bt-badge bt-badge-muted">Aguardando definição</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* =========================================================================
+   AGENDA
+   ========================================================================= */
+function AgendaView({ notify }) {
+  const [tab, setTab] = useState("dia");
+  const [selected, setSelected] = useState(null);
+
+  const bookingTypeCycle = ["plano", "avulso", "clube"];
+  const slots = SLOTS.map((s, i) => {
+    if (!BUSY_HOURS.has(i)) return { ...s, free: true };
+    const client = CLIENTS[i % CLIENTS.length];
+    const product = PRODUCTS_COURT_INIT[i % PRODUCTS_COURT_INIT.length];
+    const tipo = bookingTypeCycle[i % bookingTypeCycle.length];
+    return { ...s, free: false, client: client.name, product: tipo === "clube" ? "Clube mensal" : product.name, phone: client.phone, tipo };
+  });
+  const shiftsOrder = [...new Set(slots.map((s) => s.shift))];
+
+  return (
+    <div>
+      <div className="bt-tabs">
+        {["dia", "semana", "mês"].map((t) => (
+          <div key={t} className={`bt-tab ${tab === t ? "active" : ""}`} onClick={() => setTab(t)} style={{ textTransform: "capitalize" }}>{t}</div>
+        ))}
+      </div>
+
+      {tab === "dia" && (
+        <div className="bt-card">
+          <div className="bt-card-title">Quadra 1 — hoje</div>
+          <div className="bt-card-sub">Funcionamento por turnos. Clique em um horário reservado para ver os detalhes.</div>
+          {shiftsOrder.map((shiftName) => (
+            <div key={shiftName} style={{ marginTop: 16 }}>
+              <div style={{ fontSize: 11.5, fontWeight: 700, color: "var(--ink-faint)", textTransform: "uppercase", letterSpacing: ".04em", marginBottom: 6 }}>{shiftName}</div>
+              <div style={{ display: "flex", flexDirection: "column" }}>
+                {slots.filter((s) => s.shift === shiftName).map((s) => (
+                  <div
+                    key={s.hour}
+                    onClick={() => !s.free && setSelected(s)}
+                    style={{
+                      display: "flex", alignItems: "center", gap: 12, padding: "11px 10px",
+                      borderBottom: "1px solid var(--border)", cursor: s.free ? "default" : "pointer",
+                      background: s.free ? "transparent" : "var(--court-soft)", borderRadius: 8, flexWrap: "wrap",
+                    }}
+                  >
+                    <div style={{ width: 54, fontSize: 13, fontWeight: 700, color: "var(--ink-soft)" }}>{s.hour}</div>
+                    {s.free ? (
+                      <span className="bt-badge bt-badge-muted">Disponível</span>
+                    ) : (
+                      <>
+                        <span className={`bt-badge ${BOOKING_TYPES[s.tipo].cls}`}>{BOOKING_TYPES[s.tipo].label}</span>
+                        <div style={{ fontSize: 13.5, fontWeight: 600 }}>{s.client}</div>
+                        <div style={{ fontSize: 12.5, color: "var(--ink-soft)" }}>{s.product}</div>
+                      </>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {tab === "semana" && (
+        <div className="bt-card">
+          <div className="bt-card-title">Visão semanal</div>
+          <div className="bt-card-sub">Representação simplificada no protótipo — cada bloco é um horário do dia.</div>
+          <div style={{ display: "grid", gridTemplateColumns: "50px repeat(7, 1fr)", gap: 4, marginTop: 14 }}>
+            <div />
+            {["Seg","Ter","Qua","Qui","Sex","Sáb","Dom"].map((d) => (
+              <div key={d} style={{ fontSize: 11, textAlign: "center", color: "var(--ink-soft)", fontWeight: 700 }}>{d}</div>
+            ))}
+            {HOURS.map((h, hi) => (
+              <Fragment key={h}>
+                <div style={{ fontSize: 10.5, color: "var(--ink-faint)", display: "flex", alignItems: "center" }}>{h}</div>
+                {Array.from({ length: 7 }).map((_, di) => {
+                  const busy = (hi + di) % 3 !== 0;
+                  return <div key={`${h}-${di}`} style={{ height: 16, borderRadius: 3, background: busy ? "var(--court)" : "var(--border)" }} />;
+                })}
+              </Fragment>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {tab === "mês" && (
+        <div className="bt-card">
+          <div className="bt-card-title">Visão mensal</div>
+          <div className="bt-card-sub">Cada dia mostra sua ocupação aproximada — representação simplificada no protótipo.</div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", gap: 6, marginTop: 14 }}>
+            {Array.from({ length: 30 }).map((_, i) => {
+              const pct = [30, 45, 60, 75, 90, 55, 40][i % 7];
+              return (
+                <div key={i} style={{ border: "1px solid var(--border)", borderRadius: 8, padding: 8, minHeight: 56 }}>
+                  <div style={{ fontSize: 11, color: "var(--ink-soft)" }}>{i + 1}</div>
+                  <div style={{ marginTop: 8, height: 6, borderRadius: 4, background: "var(--border)" }}>
+                    <div style={{ width: `${pct}%`, height: 6, borderRadius: 4, background: "var(--brand)" }} />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {selected && (
+        <div className="bt-panel-overlay" onClick={() => setSelected(null)}>
+          <div className="bt-panel" onClick={(e) => e.stopPropagation()}>
+            <div className="bt-row" style={{ marginBottom: 18 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }} onClick={() => setSelected(null)}>
+                <ChevronLeft size={17} /> <span style={{ fontSize: 13, fontWeight: 700 }}>Fechar</span>
+              </div>
+              <span className={`bt-badge ${BOOKING_TYPES[selected.tipo]?.cls || "bt-badge-court"}`}>{BOOKING_TYPES[selected.tipo]?.label || "Reservado"}</span>
+            </div>
+            <div className="bt-card-title" style={{ fontSize: 18 }}>{selected.hour} — Quadra 1</div>
+            <div className="bt-field" style={{ marginTop: 18 }}>
+              <div className="bt-label">Cliente</div>
+              <div style={{ fontSize: 14, fontWeight: 600 }}>{selected.client}</div>
+              <div style={{ fontSize: 12.5, color: "var(--ink-soft)" }}>{selected.phone}</div>
+            </div>
+            <div className="bt-field">
+              <div className="bt-label">Produto / plano</div>
+              <div style={{ fontSize: 14 }}>{selected.product}</div>
+              {selected.tipo === "clube" && (
+                <div style={{ fontSize: 12, color: "var(--ink-soft)", marginTop: 4 }}>Mensalidade do clube já paga — este agendamento não gera nova cobrança.</div>
+              )}
+            </div>
+            <div style={{ display: "flex", gap: 8, marginTop: 20 }}>
+              <button className="bt-btn bt-btn-ghost" style={{ flex: 1 }} onClick={() => notify("Editar agendamento — ação ilustrativa.")}>Editar</button>
+              <button
+                className="bt-btn bt-btn-danger"
+                style={{ flex: 1 }}
+                onClick={() => { notify("Agendamento cancelado (protótipo)."); setSelected(null); }}
+              >Cancelar</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* =========================================================================
+   PLANOS DA QUADRA
+   ========================================================================= */
+function ProdutosQuadraView({ notify }) {
+  const [products, setProducts] = useState(PRODUCTS_COURT_INIT);
+  const toggle = (id) => setProducts((prev) => prev.map((p) => p.id === id ? { ...p, status: p.status === "ativo" ? "inativo" : "ativo" } : p));
+
+  return (
+    <div className="bt-card">
+      <div className="bt-row" style={{ marginBottom: 16 }}>
+        <div>
+          <div className="bt-card-title">Planos / Produtos da Quadra</div>
+          <div className="bt-card-sub">Utilizados no fluxo de agendamento do site público.</div>
+        </div>
+        <button className="bt-btn bt-btn-primary" onClick={() => notify("Abrir formulário de novo produto — ação ilustrativa.")}><Plus size={15} /> Novo produto</button>
+      </div>
+      <table className="bt-table">
+        <thead><tr><th>Nome</th><th>Descrição</th><th>Preço</th><th>Status</th><th></th></tr></thead>
+        <tbody>
+          {products.map((p) => (
+            <tr key={p.id}>
+              <td style={{ fontWeight: 600 }}>{p.name}</td>
+              <td style={{ color: "var(--ink-soft)" }}>{p.desc}</td>
+              <td>{formatBRL(p.price)}</td>
+              <td><StatusBadge status={p.status} /></td>
+              <td style={{ textAlign: "right" }}>
+                <button className="bt-btn bt-btn-ghost bt-btn-sm" onClick={() => notify("Editar produto — ação ilustrativa.")}>Editar</button>{" "}
+                <button className="bt-btn bt-btn-ghost bt-btn-sm" onClick={() => toggle(p.id)}>{p.status === "ativo" ? "Inativar" : "Reativar"}</button>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+/* =========================================================================
+   PRODUTOS DO BAR
+   ========================================================================= */
+const CATEGORY_COLORS = { "Bebidas": "#3A6EA5", "Porções": "#A6472F", "Lanches": "#C98826", "Sobremesas": "#8E5AA6", "Outros": "#636B78" };
+
+function ProdutosBarView({ notify }) {
+  const [products, setProducts] = useState(PRODUCTS_BAR_INIT);
+  const [cat, setCat] = useState("Todos");
+  const [q, setQ] = useState("");
+  const categories = ["Todos", ...Array.from(new Set(PRODUCTS_BAR_INIT.map((p) => p.cat)))];
+  const toggle = (id) => setProducts((prev) => prev.map((p) => p.id === id ? { ...p, status: p.status === "ativo" ? "inativo" : "ativo" } : p));
+
+  const filtered = products.filter((p) =>
+    (cat === "Todos" || p.cat === cat) && p.name.toLowerCase().includes(q.toLowerCase())
+  );
+
+  return (
+    <div>
+      <div className="bt-row" style={{ marginBottom: 16 }}>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          {categories.map((c) => (
+            <div key={c} className={`bt-chip ${cat === c ? "active" : ""}`} onClick={() => setCat(c)}>{c}</div>
+          ))}
+        </div>
+        <button className="bt-btn bt-btn-primary" onClick={() => notify("Abrir formulário de novo produto do bar — ação ilustrativa.")}><Plus size={15} /> Novo produto</button>
+      </div>
+      <div className="bt-field" style={{ maxWidth: 320 }}>
+        <div style={{ position: "relative" }}>
+          <Search size={15} style={{ position: "absolute", left: 10, top: 10, color: "var(--ink-faint)" }} />
+          <input className="bt-input" style={{ paddingLeft: 32 }} placeholder="Buscar produto..." value={q} onChange={(e) => setQ(e.target.value)} />
+        </div>
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 14 }}>
+        {filtered.map((p) => (
+          <div key={p.id} className="bt-card">
+            <div className="bt-photo-ph" style={{ background: `${CATEGORY_COLORS[p.cat]}22` }}>
+              <UtensilsCrossed size={26} color={CATEGORY_COLORS[p.cat]} />
+            </div>
+            <div className="bt-row">
+              <span className="bt-badge bt-badge-muted">{p.cat}</span>
+              <StatusBadge status={p.status} />
+            </div>
+            <div style={{ fontWeight: 700, fontSize: 14, marginTop: 8 }}>{p.name}</div>
+            <div style={{ fontSize: 12, color: "var(--ink-soft)", margin: "4px 0 10px" }}>{p.desc}</div>
+            <div className="bt-row">
+              <div style={{ fontFamily: "var(--font-display)", fontWeight: 800, fontSize: 15 }}>{formatBRL(p.price)}</div>
+              <button className="bt-btn bt-btn-ghost bt-btn-sm" onClick={() => toggle(p.id)}>{p.status === "ativo" ? "Inativar" : "Reativar"}</button>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* =========================================================================
+   MESAS + COMANDA
+   ========================================================================= */
+function ComandaPanel({ table, onClose, onCloseTable, notify }) {
+  const initialItems = TABLE_ITEMS[table.id] || [];
+  const [items, setItems] = useState(initialItems);
+  const [serviceOn, setServiceOn] = useState(true);
+  const [couvertOn, setCouvertOn] = useState(false);
+  const [couvertValue, setCouvertValue] = useState(10);
+  const [pessoas, setPessoas] = useState(table.pessoas || 1);
+  const [confirming, setConfirming] = useState(false);
+
+  const subtotal = items.reduce((s, it) => s + it.qtd * it.preco, 0);
+  const serviceValue = serviceOn ? subtotal * 0.1 : 0;
+  const couvertTotal = couvertOn ? pessoas * couvertValue : 0;
+  const total = subtotal + serviceValue + couvertTotal;
+
+  const changeQty = (idx, delta) => {
+    setItems((prev) => prev.map((it, i) => i === idx ? { ...it, qtd: Math.max(1, it.qtd + delta) } : it));
+  };
+
+  return (
+    <div className="bt-panel-overlay" onClick={onClose}>
+      <div className="bt-panel" onClick={(e) => e.stopPropagation()}>
+        <div className="bt-row" style={{ marginBottom: 16 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }} onClick={onClose}>
+            <ChevronLeft size={17} /> <span style={{ fontSize: 13, fontWeight: 700 }}>Fechar</span>
+          </div>
+          <StatusBadge status={table.status} />
+        </div>
+
+        <div className="bt-card-title" style={{ fontSize: 19 }}>Mesa {String(table.id).padStart(2, "0")}</div>
+
+        <div style={{ display: "flex", justifyContent: "space-between", marginTop: 14, marginBottom: 18 }}>
+          <div>
+            <div className="bt-label">Cliente</div>
+            <div style={{ fontSize: 14, fontWeight: 600 }}>{table.cliente || "Não identificado"}</div>
+            {table.telefone && <div style={{ fontSize: 12, color: "var(--ink-soft)" }}>{table.telefone}</div>}
+          </div>
+          {table.telefone && (
+            <button className="bt-btn bt-btn-ghost bt-btn-sm" onClick={() => notify(`Abrindo WhatsApp com ${table.telefone} — ação ilustrativa.`)}>
+              <MessageCircle size={14} /> WhatsApp
+            </button>
+          )}
+        </div>
+
+        {!confirming ? (
+          <>
+            <div className="bt-row" style={{ marginBottom: 8 }}>
+              <div className="bt-card-title" style={{ fontSize: 13 }}>Itens da comanda</div>
+              <button className="bt-btn bt-btn-ghost bt-btn-sm" onClick={() => notify("Buscar produto do bar — ação ilustrativa.")}><Plus size={13} /> Adicionar</button>
+            </div>
+            {items.length === 0 && <div style={{ fontSize: 13, color: "var(--ink-soft)", padding: "10px 0" }}>Nenhum item lançado ainda.</div>}
+            {items.map((it, idx) => (
+              <div className="bt-item-row" key={idx}>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontWeight: 600 }}>{it.produto}</div>
+                  <div style={{ fontSize: 11.5, color: "var(--ink-soft)" }}>{formatBRL(it.preco)} / un.</div>
+                </div>
+                <button className="bt-qty-btn" onClick={() => changeQty(idx, -1)}><Minus size={12} /></button>
+                <span style={{ width: 18, textAlign: "center", fontWeight: 700 }}>{it.qtd}</span>
+                <button className="bt-qty-btn" onClick={() => changeQty(idx, 1)}><Plus size={12} /></button>
+                <div style={{ width: 62, textAlign: "right", fontWeight: 700 }}>{formatBRL(it.qtd * it.preco)}</div>
+              </div>
+            ))}
+
+            <div style={{ marginTop: 18, display: "flex", flexDirection: "column", gap: 10 }}>
+              <label className="bt-row" style={{ fontSize: 13 }}>
+                <span>Adicionar 10% de serviço</span>
+                <input type="checkbox" checked={serviceOn} onChange={(e) => setServiceOn(e.target.checked)} />
+              </label>
+              <label className="bt-row" style={{ fontSize: 13 }}>
+                <span>Cobrar couvert</span>
+                <input type="checkbox" checked={couvertOn} onChange={(e) => setCouvertOn(e.target.checked)} />
+              </label>
+              {couvertOn && (
+                <div style={{ display: "flex", gap: 8 }}>
+                  <div style={{ flex: 1 }}>
+                    <div className="bt-label">Pessoas</div>
+                    <input type="number" min={1} className="bt-input" value={pessoas} onChange={(e) => setPessoas(Number(e.target.value) || 1)} />
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <div className="bt-label">Valor / pessoa</div>
+                    <input type="number" min={0} className="bt-input" value={couvertValue} onChange={(e) => setCouvertValue(Number(e.target.value) || 0)} />
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div style={{ marginTop: 18, borderTop: "1px solid var(--border)", paddingTop: 14, display: "flex", flexDirection: "column", gap: 6, fontSize: 13.5 }}>
+              <div className="bt-row"><span>Subtotal</span><span>{formatBRL(subtotal)}</span></div>
+              {serviceOn && <div className="bt-row"><span>Serviço 10%</span><span>{formatBRL(serviceValue)}</span></div>}
+              {couvertOn && <div className="bt-row"><span>Couvert ({pessoas} pessoas)</span><span>{formatBRL(couvertTotal)}</span></div>}
+              <div className="bt-row" style={{ fontFamily: "var(--font-display)", fontWeight: 800, fontSize: 16, marginTop: 4 }}>
+                <span>Total</span><span>{formatBRL(total)}</span>
+              </div>
+            </div>
+
+            <div style={{ display: "flex", gap: 8, marginTop: 20 }}>
+              <button className="bt-btn bt-btn-ghost" style={{ flex: 1 }} onClick={() => notify("Enviando para impressora térmica — ação ilustrativa.")}>
+                <Printer size={14} /> Imprimir
+              </button>
+              <button className="bt-btn bt-btn-primary" style={{ flex: 1 }} onClick={() => setConfirming(true)}>Fechar mesa</button>
+            </div>
+          </>
+        ) : (
+          <div>
+            <div className="bt-card" style={{ background: "var(--surface-alt)" }}>
+              <div className="bt-card-title" style={{ marginBottom: 10 }}>Resumo do fechamento</div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 6, fontSize: 13.5 }}>
+                <div className="bt-row"><span>Produtos</span><span>{formatBRL(subtotal)}</span></div>
+                {serviceOn && <div className="bt-row"><span>Serviço 10%</span><span>{formatBRL(serviceValue)}</span></div>}
+                {couvertOn && <div className="bt-row"><span>Couvert</span><span>{formatBRL(couvertTotal)}</span></div>}
+                <div className="bt-row" style={{ fontFamily: "var(--font-display)", fontWeight: 800, fontSize: 17, marginTop: 6, borderTop: "1px solid var(--border)", paddingTop: 8 }}>
+                  <span>Total</span><span>{formatBRL(total)}</span>
+                </div>
+              </div>
+            </div>
+            <div style={{ display: "flex", gap: 8, marginTop: 16 }}>
+              <button className="bt-btn bt-btn-ghost" style={{ flex: 1 }} onClick={() => setConfirming(false)}>Voltar</button>
+              <button
+                className="bt-btn bt-btn-primary"
+                style={{ flex: 1 }}
+                onClick={() => {
+                  notify(`Mesa ${table.id} fechada — consumo registrado no histórico.`);
+                  onCloseTable(table.id);
+                }}
+              >Confirmar fechamento</button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function AbrirMesaPanel({ table, onClose, onOpenTable, notify }) {
+  const [nome, setNome] = useState("");
+  const [telefone, setTelefone] = useState("");
+  const [pessoas, setPessoas] = useState(1);
+
+  return (
+    <div className="bt-panel-overlay" onClick={onClose}>
+      <div className="bt-panel" onClick={(e) => e.stopPropagation()}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", marginBottom: 18 }} onClick={onClose}>
+          <ChevronLeft size={17} /> <span style={{ fontSize: 13, fontWeight: 700 }}>Fechar</span>
+        </div>
+        <div className="bt-card-title" style={{ fontSize: 19, marginBottom: 4 }}>Abrir Mesa {String(table.id).padStart(2, "0")}</div>
+        <div className="bt-card-sub" style={{ marginBottom: 18 }}>Nome e telefone são opcionais — a mesa pode ser aberta sem identificar o cliente.</div>
+
+        <div className="bt-field">
+          <div className="bt-label">Nome do cliente (opcional)</div>
+          <input className="bt-input" placeholder="Ex: João da Silva" value={nome} onChange={(e) => setNome(e.target.value)} />
+        </div>
+        <div className="bt-field">
+          <div className="bt-label">Telefone (opcional)</div>
+          <input className="bt-input" placeholder="(17) 99999-9999" value={telefone} onChange={(e) => setTelefone(e.target.value)} />
+          {telefone.length >= 8 && (
+            <div className="bt-card" style={{ marginTop: 8, padding: 10, background: "var(--court-soft)" }}>
+              <div style={{ fontSize: 12, color: "var(--court)", fontWeight: 700 }}>Cliente encontrado no CRM</div>
+              <div style={{ fontSize: 13, fontWeight: 600, marginTop: 2 }}>{nome || "Cliente correspondente"}</div>
+            </div>
+          )}
+        </div>
+        <div className="bt-field">
+          <div className="bt-label">Quantidade de pessoas</div>
+          <input type="number" min={1} className="bt-input" value={pessoas} onChange={(e) => setPessoas(Number(e.target.value) || 1)} />
+        </div>
+
+        <button
+          className="bt-btn bt-btn-primary"
+          style={{ width: "100%", justifyContent: "center", marginTop: 8 }}
+          onClick={() => { onOpenTable(table.id, { nome, telefone, pessoas }); notify(`Mesa ${table.id} aberta.`); }}
+        >Abrir mesa e lançar produtos</button>
+      </div>
+    </div>
+  );
+}
+
+function timeSince(hhmm) {
+  if (!hhmm) return "";
+  const [h, m] = hhmm.split(":").map(Number);
+  const now = new Date(2026, 8, 9, 20, 15);
+  const opened = new Date(2026, 8, 9, h, m);
+  const diffMin = Math.max(0, Math.round((now - opened) / 60000));
+  return diffMin >= 60 ? `${Math.floor(diffMin / 60)}h${diffMin % 60}min` : `${diffMin}min`;
+}
+
+function MesasView({ notify }) {
+  const [tables, setTables] = useState(TABLES_INIT);
+  const [selected, setSelected] = useState(null);
+
+  const closeTable = (id) => {
+    setTables((prev) => prev.map((t) => t.id === id ? { id, status: "livre" } : t));
+    setSelected(null);
+  };
+  const openTable = (id, info) => {
+    setTables((prev) => prev.map((t) => t.id === id ? { ...t, status: "ocupada", cliente: info.nome || null, telefone: info.telefone || null, pessoas: info.pessoas, aberta: "20:15", valor: 0 } : t));
+    setSelected(null);
+  };
+
+  return (
+    <div>
+      <div className="bt-card-sub" style={{ marginBottom: 14 }}>Exibindo 16 de 50 mesas configuradas — a quantidade pode ser ajustada em Configurações.</div>
+      <div className="bt-tables-grid">
+        {tables.map((t) => (
+          <div key={t.id} className={`bt-table-card ${t.status !== "livre" ? `st-${t.status}` : ""}`} onClick={() => setSelected(t)}>
+            <div className="bt-row" style={{ marginBottom: 6 }}>
+              <span className="bt-table-num">Mesa {String(t.id).padStart(2, "0")}</span>
+            </div>
+            <StatusBadge status={t.status} />
+            {t.status !== "livre" && (
+              <div style={{ marginTop: 8 }}>
+                <div style={{ fontSize: 12.5, fontWeight: 600 }}>{t.cliente || "Não identificado"}</div>
+                <div style={{ fontSize: 11.5, color: "var(--ink-soft)" }}>{t.pessoas} pessoas · há {timeSince(t.aberta)}</div>
+                <div style={{ fontFamily: "var(--font-display)", fontWeight: 800, fontSize: 14, marginTop: 4 }}>{formatBRL(t.valor)}</div>
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+
+      {selected && selected.status === "livre" && (
+        <AbrirMesaPanel table={selected} onClose={() => setSelected(null)} onOpenTable={openTable} notify={notify} />
+      )}
+      {selected && selected.status !== "livre" && (
+        <ComandaPanel table={selected} onClose={() => setSelected(null)} onCloseTable={closeTable} notify={notify} />
+      )}
+    </div>
+  );
+}
+
+/* =========================================================================
+   CLIENTES / CRM
+   ========================================================================= */
+function NovoClienteModal({ onClose, notify }) {
+  const [showMore, setShowMore] = useState(false);
+  return (
+    <div className="bt-panel-overlay" onClick={onClose}>
+      <div className="bt-panel" onClick={(e) => e.stopPropagation()}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", marginBottom: 18 }} onClick={onClose}>
+          <ChevronLeft size={17} /> <span style={{ fontSize: 13, fontWeight: 700 }}>Fechar</span>
+        </div>
+        <div className="bt-card-title" style={{ fontSize: 19, marginBottom: 18 }}>Novo cliente</div>
+
+        <div className="bt-field">
+          <div className="bt-label">Nome *</div>
+          <input className="bt-input" placeholder="Nome completo" />
+        </div>
+        <div className="bt-field">
+          <div className="bt-label">Telefone *</div>
+          <input className="bt-input" placeholder="(17) 99999-9999" />
+        </div>
+
+        <div
+          style={{ fontSize: 13, fontWeight: 700, color: "var(--brand-deep)", cursor: "pointer", marginBottom: showMore ? 14 : 4 }}
+          onClick={() => setShowMore((s) => !s)}
+        >
+          {showMore ? "− Ocultar dados adicionais" : "+ Preencher mais dados (opcional)"}
+        </div>
+
+        {showMore && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+            <div className="bt-field">
+              <div className="bt-label">CPF</div>
+              <input className="bt-input" placeholder="000.000.000-00" />
+            </div>
+            <div className="bt-field">
+              <div className="bt-label">Data de nascimento</div>
+              <input type="date" className="bt-input" />
+            </div>
+          </div>
+        )}
+
+        <button
+          className="bt-btn bt-btn-primary"
+          style={{ width: "100%", justifyContent: "center", marginTop: 8 }}
+          onClick={() => { notify("Cliente cadastrado no CRM — ação ilustrativa."); onClose(); }}
+        >Salvar cliente</button>
+      </div>
+    </div>
+  );
+}
+
+function ClientDetail({ client, onBack, notify }) {
+  const [tab, setTab] = useState("quadra");
+  const [clube, setClube] = useState(client.clube);
+  const total = client.quadraGasto + client.mesasConsumo;
+
+  const ativarClube = () => {
+    setClube({ ativo: true, pago: false, dataPagamento: null, referencia: "Setembro/2026", valor: 220 });
+    notify("Clube mensal ativado para este cliente.");
+  };
+  const lancarPagamento = () => {
+    setClube((c) => ({ ...c, pago: true, dataPagamento: "09/09/2026" }));
+    notify("Pagamento da mensalidade registrado — não gera cobrança adicional nos próximos agendamentos.");
+  };
+
+  return (
+    <div>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", marginBottom: 18 }} onClick={onBack}>
+        <ChevronLeft size={17} /> <span style={{ fontSize: 13, fontWeight: 700 }}>Voltar para clientes</span>
+      </div>
+
+      <div className="bt-card" style={{ marginBottom: 16 }}>
+        <div className="bt-row">
+          <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+            <div className="bt-avatar" style={{ width: 50, height: 50, fontSize: 16 }}>{initials(client.name)}</div>
+            <div>
+              <div style={{ fontFamily: "var(--font-display)", fontWeight: 800, fontSize: 18 }}>{client.name}</div>
+              <div style={{ fontSize: 13, color: "var(--ink-soft)" }}>{client.phone}</div>
+            </div>
+            <StatusBadge status={client.status} />
+          </div>
+          <div style={{ display: "flex", gap: 8 }}>
+            <button className="bt-btn bt-btn-ghost bt-btn-sm" onClick={() => notify(`Abrindo WhatsApp com ${client.phone} — ação ilustrativa.`)}><MessageCircle size={14} /> WhatsApp</button>
+            <button className="bt-btn bt-btn-ghost bt-btn-sm" onClick={() => notify("Editar cliente — ação ilustrativa.")}>Editar</button>
+            <button className="bt-btn bt-btn-danger bt-btn-sm" onClick={() => notify(client.status === "ativo" ? "Cliente inativado (soft delete) — histórico preservado." : "Cliente reativado.")}>
+              {client.status === "ativo" ? "Inativar" : "Reativar"}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div className="bt-card" style={{ marginBottom: 16 }}>
+        <div className="bt-row">
+          <div>
+            <div className="bt-card-title">Clube mensal</div>
+            <div className="bt-card-sub">Mensalidade paga libera agendamentos sem cobrança avulsa a cada reserva.</div>
+          </div>
+          {clube ? (
+            <span className={`bt-badge ${clube.ativo ? "bt-badge-success" : "bt-badge-muted"}`}>{clube.ativo ? "Ativo" : "Inativo"}</span>
+          ) : (
+            <span className="bt-badge bt-badge-muted">Não participa</span>
+          )}
+        </div>
+
+        {clube ? (
+          <div style={{ marginTop: 12 }}>
+            <div style={{ display: "flex", gap: 24, flexWrap: "wrap", fontSize: 13.5, marginBottom: 14 }}>
+              <div><div className="bt-stat-label">Referência</div><div style={{ fontWeight: 700 }}>{clube.referencia}</div></div>
+              <div><div className="bt-stat-label">Mensalidade</div><div style={{ fontWeight: 700 }}>{formatBRL(clube.valor)}</div></div>
+              <div><div className="bt-stat-label">Status do período</div><span className={`bt-badge ${clube.pago ? "bt-badge-success" : "bt-badge-warning"}`}>{clube.pago ? "Paga" : "Pendente"}</span></div>
+              <div><div className="bt-stat-label">Data do pagamento</div><div style={{ fontWeight: 700 }}>{clube.dataPagamento || "—"}</div></div>
+            </div>
+            {!clube.pago && (
+              <button className="bt-btn bt-btn-primary bt-btn-sm" onClick={lancarPagamento}>Lançar pagamento da mensalidade</button>
+            )}
+          </div>
+        ) : (
+          <button className="bt-btn bt-btn-ghost bt-btn-sm" style={{ marginTop: 10 }} onClick={ativarClube}>Ativar clube mensal para este cliente</button>
+        )}
+      </div>
+
+      <div className="bt-stat-grid" style={{ marginBottom: 16 }}>
+        <div className="bt-card"><div className="bt-stat-label">Reservas de quadra</div><div className="bt-stat-value">{client.quadraReservas}</div></div>
+        <div className="bt-card"><div className="bt-stat-label">Gasto em quadra</div><div className="bt-stat-value">{formatBRL(client.quadraGasto)}</div></div>
+        <div className="bt-card"><div className="bt-stat-label">Atendimentos em mesa</div><div className="bt-stat-value">{client.mesasAtendimentos}</div></div>
+        <div className="bt-card"><div className="bt-stat-label">Consumo no bar</div><div className="bt-stat-value">{formatBRL(client.mesasConsumo)}</div></div>
+        <div className="bt-card" style={{ background: "var(--court-soft)" }}><div className="bt-stat-label">Total movimentado</div><div className="bt-stat-value" style={{ color: "var(--court)" }}>{formatBRL(total)}</div></div>
+      </div>
+
+      <div className="bt-card">
+        <div className="bt-tabs">
+          <div className={`bt-tab ${tab === "quadra" ? "active" : ""}`} onClick={() => setTab("quadra")}>Histórico de quadra</div>
+          <div className={`bt-tab ${tab === "bar" ? "active" : ""}`} onClick={() => setTab("bar")}>Histórico no bar</div>
+          <div className={`bt-tab ${tab === "dados" ? "active" : ""}`} onClick={() => setTab("dados")}>Dados cadastrais</div>
+        </div>
+
+        {tab === "quadra" && (
+          <table className="bt-table">
+            <thead><tr><th>Data</th><th>Produto</th><th>Tipo</th><th>Valor</th><th>Status</th></tr></thead>
+            <tbody>
+              <tr><td>08/09/2026</td><td>Day Use</td><td><span className="bt-badge bt-badge-muted">Avulso</span></td><td>{formatBRL(80)}</td><td><span className="bt-badge bt-badge-success">Concluído</span></td></tr>
+              <tr><td>05/09/2026</td><td>Aula Individual</td><td><span className="bt-badge bt-badge-muted">Avulso</span></td><td>{formatBRL(120)}</td><td><span className="bt-badge bt-badge-success">Concluído</span></td></tr>
+              <tr><td>01/09/2026</td><td>Pacote Semanal</td><td><span className="bt-badge bt-badge-court">Plano</span></td><td>{formatBRL(150)}</td><td><span className="bt-badge bt-badge-court">Recorrente</span></td></tr>
+              {clube?.pago && (
+                <tr><td>03/09/2026</td><td>Clube mensal</td><td><span className="bt-badge bt-badge-warning">Clube</span></td><td>{formatBRL(0)}</td><td><span className="bt-badge bt-badge-success">Concluído</span></td></tr>
+              )}
+            </tbody>
+          </table>
+        )}
+        {tab === "bar" && (
+          <table className="bt-table">
+            <thead><tr><th>Data</th><th>Mesa</th><th>Itens</th><th>Total</th></tr></thead>
+            <tbody>
+              <tr><td>07/09/2026</td><td>Mesa 05</td><td>2x Batata, 3x Refrigerante</td><td>{formatBRL(102)}</td></tr>
+              <tr><td>30/08/2026</td><td>Mesa 12</td><td>1x Isca de Peixe, 2x Água</td><td>{formatBRL(58)}</td></tr>
+            </tbody>
+          </table>
+        )}
+        {tab === "dados" && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 12, fontSize: 13.5 }}>
+            <div className="bt-row"><span style={{ color: "var(--ink-soft)" }}>Nome</span><span style={{ fontWeight: 600 }}>{client.name}</span></div>
+            <div className="bt-row"><span style={{ color: "var(--ink-soft)" }}>Telefone</span><span style={{ fontWeight: 600 }}>{client.phone}</span></div>
+            <div className="bt-row"><span style={{ color: "var(--ink-soft)" }}>CPF</span><span style={{ fontWeight: 600 }}>{client.cpf || "Não informado"}</span></div>
+            <div className="bt-row"><span style={{ color: "var(--ink-soft)" }}>Data de nascimento</span><span style={{ fontWeight: 600 }}>{client.birthdate || "Não informado"}</span></div>
+            <div className="bt-row"><span style={{ color: "var(--ink-soft)" }}>Última visita</span><span style={{ fontWeight: 600 }}>{client.ultimaVisita}</span></div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function ClientesView({ notify }) {
+  const [q, setQ] = useState("");
+  const [filter, setFilter] = useState("ativos");
+  const [selectedId, setSelectedId] = useState(null);
+  const [showNew, setShowNew] = useState(false);
+
+  const filtered = CLIENTS.filter((c) => {
+    if (filter === "ativos" && c.status !== "ativo") return false;
+    if (filter === "inativos" && c.status !== "inativo") return false;
+    const query = q.toLowerCase();
+    return c.name.toLowerCase().includes(query) || c.phone.includes(query) || (c.cpf || "").includes(query);
+  });
+
+  const selected = CLIENTS.find((c) => c.id === selectedId);
+  if (selected) return <ClientDetail client={selected} onBack={() => setSelectedId(null)} notify={notify} />;
+
+  return (
+    <div>
+      <div className="bt-row" style={{ marginBottom: 16 }}>
+        <div style={{ display: "flex", gap: 8 }}>
+          {[["ativos", "Ativos"], ["inativos", "Inativos"], ["todos", "Todos"]].map(([k, l]) => (
+            <div key={k} className={`bt-chip ${filter === k ? "active" : ""}`} onClick={() => setFilter(k)}>{l}</div>
+          ))}
+        </div>
+        <button className="bt-btn bt-btn-primary" onClick={() => setShowNew(true)}><Plus size={15} /> Novo cliente</button>
+      </div>
+      <div className="bt-field" style={{ maxWidth: 340 }}>
+        <div style={{ position: "relative" }}>
+          <Search size={15} style={{ position: "absolute", left: 10, top: 10, color: "var(--ink-faint)" }} />
+          <input className="bt-input" style={{ paddingLeft: 32 }} placeholder="Buscar por nome, telefone ou CPF..." value={q} onChange={(e) => setQ(e.target.value)} />
+        </div>
+      </div>
+      <div className="bt-card" style={{ padding: 0 }}>
+        <table className="bt-table">
+          <thead><tr><th>Cliente</th><th>Telefone</th><th>Status</th><th>Reservas</th><th>Consumo bar</th><th>Total</th><th></th></tr></thead>
+          <tbody>
+            {filtered.map((c) => (
+              <tr key={c.id} style={{ cursor: "pointer" }} onClick={() => setSelectedId(c.id)}>
+                <td style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <div className="bt-avatar">{initials(c.name)}</div>
+                  <span style={{ fontWeight: 600 }}>{c.name}</span>
+                </td>
+                <td>{c.phone}</td>
+                <td><StatusBadge status={c.status} /></td>
+                <td>{c.quadraReservas}</td>
+                <td>{formatBRL(c.mesasConsumo)}</td>
+                <td style={{ fontWeight: 700 }}>{formatBRL(c.quadraGasto + c.mesasConsumo)}</td>
+                <td style={{ textAlign: "right" }} onClick={(e) => e.stopPropagation()}>
+                  <button className="bt-btn bt-btn-ghost bt-btn-sm" onClick={() => notify(`Abrindo WhatsApp com ${c.phone} — ação ilustrativa.`)}><Phone size={13} /></button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      {showNew && <NovoClienteModal onClose={() => setShowNew(false)} notify={notify} />}
+    </div>
+  );
+}
+
+/* =========================================================================
+   VENDAS
+   ========================================================================= */
+function VendasView({ notify }) {
+  return (
+    <div>
+      <div className="bt-row" style={{ marginBottom: 16 }}>
+        <div className="bt-card-sub">Lançamentos avulsos e recorrentes de planos, pacotes e produtos.</div>
+        <div style={{ display: "flex", gap: 8 }}>
+          <button className="bt-btn bt-btn-ghost" onClick={() => notify("Lançar venda recorrente — ação ilustrativa.")}>Venda recorrente</button>
+          <button className="bt-btn bt-btn-primary" onClick={() => notify("Nova venda — ação ilustrativa.")}><Plus size={15} /> Nova venda</button>
+        </div>
+      </div>
+      <div className="bt-card" style={{ padding: 0 }}>
+        <table className="bt-table">
+          <thead><tr><th>Data</th><th>Cliente</th><th>Produto</th><th>Valor</th><th>Tipo</th><th></th></tr></thead>
+          <tbody>
+            {SALES.map((s) => (
+              <tr key={s.id}>
+                <td>{s.data}</td>
+                <td style={{ fontWeight: 600 }}>{s.cliente}</td>
+                <td>{s.produto}</td>
+                <td>{formatBRL(s.valor)}</td>
+                <td><span className={`bt-badge ${s.tipo === "Recorrente" ? "bt-badge-court" : "bt-badge-muted"}`}>{s.tipo}</span></td>
+                <td style={{ textAlign: "right" }}><button className="bt-btn bt-btn-ghost bt-btn-sm" onClick={() => notify("Ver detalhes da venda — ação ilustrativa.")}>Ver</button></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+/* =========================================================================
+   RELATÓRIOS
+   ========================================================================= */
+function RelatoriosView() {
+  return (
+    <div>
+      <div className="bt-card-sub" style={{ marginBottom: 16 }}>Estrutura modular, pronta para exportação em Excel (.xlsx) assim que cada relatório for definido.</div>
+      <div className="bt-grid-3">
+        {REPORT_GROUPS.map((g) => (
+          <div className="bt-card" key={g.group}>
+            <div className="bt-card-title" style={{ marginBottom: 12 }}>{g.group}</div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              {g.items.map((it) => (
+                <div key={it} className="bt-row" style={{ padding: "8px 0", borderBottom: "1px solid var(--border)" }}>
+                  <span style={{ fontSize: 13 }}>{it}</span>
+                  <span className="bt-badge bt-badge-muted">Estrutura pronta</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* =========================================================================
+   CONFIGURAÇÕES
+   ========================================================================= */
+function StaffModal({ staff, onClose, onSave, notify }) {
+  const isNew = !staff;
+  const [nome, setNome] = useState(staff?.nome || "");
+  const [usuario, setUsuario] = useState(staff?.usuario || "");
+  const [senha, setSenha] = useState("");
+  const [status, setStatus] = useState(staff?.status || "ativo");
+  const [permissoes, setPermissoes] = useState(staff?.permissoes || []);
+
+  const togglePerm = (m) => setPermissoes((prev) => prev.includes(m) ? prev.filter((x) => x !== m) : [...prev, m]);
+
+  return (
+    <div className="bt-panel-overlay" onClick={onClose}>
+      <div className="bt-panel" onClick={(e) => e.stopPropagation()}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", marginBottom: 18 }} onClick={onClose}>
+          <ChevronLeft size={17} /> <span style={{ fontSize: 13, fontWeight: 700 }}>Fechar</span>
+        </div>
+        <div className="bt-card-title" style={{ fontSize: 19, marginBottom: 18 }}>{isNew ? "Novo funcionário" : `Editar ${staff.nome}`}</div>
+
+        <div className="bt-field"><div className="bt-label">Nome</div><input className="bt-input" value={nome} onChange={(e) => setNome(e.target.value)} /></div>
+        <div className="bt-field"><div className="bt-label">Usuário / login</div><input className="bt-input" value={usuario} onChange={(e) => setUsuario(e.target.value)} /></div>
+        <div className="bt-field">
+          <div className="bt-label">{isNew ? "Senha" : "Redefinir senha (opcional)"}</div>
+          <input type="password" className="bt-input" placeholder={isNew ? "" : "Deixe em branco para manter a atual"} value={senha} onChange={(e) => setSenha(e.target.value)} />
+        </div>
+        <label className="bt-row" style={{ fontSize: 13, marginBottom: 18 }}>
+          <span>Login ativo</span>
+          <input type="checkbox" checked={status === "ativo"} onChange={(e) => setStatus(e.target.checked ? "ativo" : "inativo")} />
+        </label>
+
+        <div className="bt-label" style={{ marginBottom: 8 }}>Abas / módulos permitidos</div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 4, marginBottom: 20, maxHeight: 240, overflowY: "auto" }}>
+          {MODULES_LIST.map((m) => (
+            <label key={m} className="bt-row" style={{ fontSize: 13.5, padding: "6px 0" }}>
+              <span>{m}</span>
+              <input type="checkbox" checked={permissoes.includes(m)} onChange={() => togglePerm(m)} />
+            </label>
+          ))}
+        </div>
+
+        <div className="bt-card-sub" style={{ marginBottom: 14 }}>
+          Estas permissões também serão validadas no backend/Supabase quando a integração real estiver pronta — não apenas escondidas na interface.
+        </div>
+
+        <button
+          className="bt-btn bt-btn-primary"
+          style={{ width: "100%", justifyContent: "center" }}
+          onClick={() => {
+            onSave({ id: staff?.id || Date.now(), nome, usuario, status, permissoes });
+            notify(isNew ? "Funcionário cadastrado." : "Funcionário atualizado.");
+          }}
+        >Salvar funcionário</button>
+      </div>
+    </div>
+  );
+}
+
+function ConfiguracoesView({ notify }) {
+  const [msg, setMsg] = useState("Olá, {nome}! Seu agendamento para {data} às {horario} foi realizado com sucesso.");
+  const [schedule, setSchedule] = useState(() => JSON.parse(JSON.stringify(SCHEDULE_INIT)));
+  const [selectedDay, setSelectedDay] = useState(0);
+  const [staff, setStaff] = useState(STAFF_INIT);
+  const [editingStaff, setEditingStaff] = useState(undefined); // undefined = fechado, null = novo, objeto = editar
+  const variables = ["{nome}", "{telefone}", "{data}", "{horario}", "{produto}", "{valor}"];
+
+  const dayTurnos = schedule[selectedDay];
+  const updateTurno = (id, field, value) => setSchedule((prev) => ({
+    ...prev,
+    [selectedDay]: prev[selectedDay].map((t) => t.id === id ? { ...t, [field]: value } : t),
+  }));
+  const removeTurno = (id) => setSchedule((prev) => ({ ...prev, [selectedDay]: prev[selectedDay].filter((t) => t.id !== id) }));
+  const addTurno = () => setSchedule((prev) => ({
+    ...prev,
+    [selectedDay]: [...prev[selectedDay], { id: `turno-${Date.now()}`, label: "Novo turno", start: 9, end: 10 }],
+  }));
+  const copyToWeekdays = () => setSchedule((prev) => {
+    const next = { ...prev };
+    [1, 2, 3, 4, 5, 6].forEach((d) => { next[d] = dayTurnos.map((t) => ({ ...t, id: `turno-${d}-${t.id}-${Date.now()}` })); });
+    return next;
+  });
+
+  const saveStaff = (data) => setStaff((prev) => {
+    const exists = prev.some((s) => s.id === data.id);
+    return exists ? prev.map((s) => s.id === data.id ? data : s) : [...prev, data];
+  });
+  const toggleStaffStatus = (id) => setStaff((prev) => prev.map((s) => s.id === id ? { ...s, status: s.status === "ativo" ? "inativo" : "ativo" } : s));
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+      <div className="bt-card">
+        <div className="bt-card-title" style={{ marginBottom: 14 }}>Dados da empresa</div>
+        <div className="bt-grid-2">
+          <div>
+            <div className="bt-field"><div className="bt-label">Nome do estabelecimento</div><input className="bt-input" defaultValue={BRAND.name} /></div>
+            <div className="bt-field"><div className="bt-label">Telefone</div><input className="bt-input" placeholder="(17) 3000-0000" /></div>
+          </div>
+          <div>
+            <div className="bt-label">Logo</div>
+            <div style={{ border: "1.5px solid var(--border)", borderRadius: 10, padding: 20, textAlign: "center", color: "var(--ink-soft)", fontSize: 12.5 }}>
+              <div className="bt-logo-badge lg" style={{ margin: "0 auto 10px" }}><img src={BRAND.logo} alt={BRAND.name} /></div>
+              Logo atual do estabelecimento.
+              <div style={{ marginTop: 10 }}><button className="bt-btn bt-btn-ghost bt-btn-sm" onClick={() => notify("Enviar nova logo — ação ilustrativa.")}>Trocar logo</button></div>
+            </div>
+          </div>
+        </div>
+        <button className="bt-btn bt-btn-primary" style={{ marginTop: 14 }} onClick={() => notify("Dados da empresa salvos.")}>Salvar</button>
+      </div>
+
+      <div className="bt-card">
+        <div className="bt-card-title">WhatsApp</div>
+        <div className="bt-card-sub" style={{ marginBottom: 14 }}>Mensagem de confirmação enviada após o agendamento. Clique em uma variável para inseri-la.</div>
+        <div className="bt-field"><div className="bt-label">Número do estabelecimento</div><input className="bt-input" placeholder="(17) 99999-9999" /></div>
+        <div className="bt-field">
+          <div className="bt-label">Mensagem de confirmação</div>
+          <textarea className="bt-textarea" rows={3} value={msg} onChange={(e) => setMsg(e.target.value)} />
+        </div>
+        <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 14 }}>
+          {variables.map((v) => (
+            <span key={v} className="bt-var-chip" onClick={() => setMsg((m) => `${m} ${v}`)}>{v}</span>
+          ))}
+        </div>
+        <button className="bt-btn bt-btn-primary" onClick={() => notify("Mensagem de WhatsApp salva.")}>Salvar</button>
+      </div>
+
+      <div className="bt-card">
+        <div className="bt-card-title" style={{ marginBottom: 4 }}>Agenda — turnos por dia da semana</div>
+        <div className="bt-card-sub" style={{ marginBottom: 14 }}>Cada dia pode ter turnos diferentes — domingo não precisa seguir o mesmo horário de segunda. Um dia sem nenhum turno fica fechado.</div>
+
+        <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 18 }}>
+          {DAYS_OF_WEEK.map((d) => (
+            <div key={d.id} className={`bt-chip ${selectedDay === d.id ? "active" : ""}`} onClick={() => setSelectedDay(d.id)}>
+              {d.short}
+              {schedule[d.id].length === 0 && <span style={{ marginLeft: 5, opacity: 0.6 }}>· fechado</span>}
+            </div>
+          ))}
+        </div>
+
+        <div className="bt-row" style={{ marginBottom: 10 }}>
+          <div style={{ fontSize: 13.5, fontWeight: 700 }}>{DAYS_OF_WEEK.find((d) => d.id === selectedDay).label}</div>
+          <div style={{ display: "flex", gap: 8 }}>
+            <button className="bt-btn bt-btn-ghost bt-btn-sm" onClick={copyToWeekdays}>Copiar para seg–sáb</button>
+            <button className="bt-btn bt-btn-ghost bt-btn-sm" onClick={addTurno}><Plus size={13} /> Turno</button>
+          </div>
+        </div>
+
+        {dayTurnos.length === 0 ? (
+          <div className="bt-card-sub" style={{ padding: "10px 0" }}>Fechado neste dia — nenhum turno cadastrado.</div>
+        ) : (
+          <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 6 }}>
+            {dayTurnos.map((t) => (
+              <div key={t.id} style={{ display: "flex", gap: 8, alignItems: "flex-end" }}>
+                <div style={{ flex: 1.4 }}>
+                  <div className="bt-label">Nome do turno</div>
+                  <input className="bt-input" value={t.label} onChange={(e) => updateTurno(t.id, "label", e.target.value)} />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <div className="bt-label">Início</div>
+                  <input type="number" min={0} max={23} className="bt-input" value={t.start} onChange={(e) => updateTurno(t.id, "start", Number(e.target.value))} />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <div className="bt-label">Fim</div>
+                  <input type="number" min={1} max={24} className="bt-input" value={t.end} onChange={(e) => updateTurno(t.id, "end", Number(e.target.value))} />
+                </div>
+                <button className="bt-btn bt-btn-ghost bt-btn-sm" onClick={() => removeTurno(t.id)}>Remover</button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <button className="bt-btn bt-btn-primary" style={{ marginTop: 10 }} onClick={() => notify("Turnos da agenda salvos.")}>Salvar</button>
+      </div>
+
+      <div className="bt-card">
+        <div className="bt-card-title" style={{ marginBottom: 14 }}>Mesas</div>
+        <div className="bt-field" style={{ maxWidth: 200 }}>
+          <div className="bt-label">Quantidade de mesas</div>
+          <input type="number" className="bt-input" defaultValue={50} />
+        </div>
+        <div className="bt-card-sub" style={{ marginBottom: 14 }}>Ajustável a qualquer momento — o número não fica fixo no sistema.</div>
+        <button className="bt-btn bt-btn-primary" onClick={() => notify("Quantidade de mesas salva.")}>Salvar</button>
+      </div>
+
+      <div className="bt-card">
+        <div className="bt-row" style={{ marginBottom: 14 }}>
+          <div>
+            <div className="bt-card-title">Funcionários</div>
+            <div className="bt-card-sub">Cada funcionário só acessa as abas marcadas para ele — o dono tem acesso completo.</div>
+          </div>
+          <button className="bt-btn bt-btn-primary" onClick={() => setEditingStaff(null)}><Plus size={15} /> Novo funcionário</button>
+        </div>
+        <table className="bt-table">
+          <thead><tr><th>Nome</th><th>Usuário</th><th>Status</th><th>Permissões</th><th></th></tr></thead>
+          <tbody>
+            {staff.map((s) => (
+              <tr key={s.id}>
+                <td style={{ fontWeight: 600 }}>{s.nome}</td>
+                <td style={{ color: "var(--ink-soft)" }}>{s.usuario}</td>
+                <td><StatusBadge status={s.status} /></td>
+                <td style={{ maxWidth: 260 }}>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
+                    {s.permissoes.slice(0, 3).map((p) => <span key={p} className="bt-badge bt-badge-muted">{p}</span>)}
+                    {s.permissoes.length > 3 && <span className="bt-badge bt-badge-muted">+{s.permissoes.length - 3}</span>}
+                  </div>
+                </td>
+                <td style={{ textAlign: "right", whiteSpace: "nowrap" }}>
+                  <button className="bt-btn bt-btn-ghost bt-btn-sm" onClick={() => setEditingStaff(s)}>Editar</button>{" "}
+                  <button className="bt-btn bt-btn-ghost bt-btn-sm" onClick={() => toggleStaffStatus(s.id)}>{s.status === "ativo" ? "Desativar" : "Ativar"}</button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {editingStaff !== undefined && (
+        <StaffModal staff={editingStaff} onClose={() => setEditingStaff(undefined)} onSave={saveStaff} notify={notify} />
+      )}
+    </div>
+  );
+}
+
+/* =========================================================================
+   APP
+   ========================================================================= */
+export default function AdminPanel() {
+  const [view, setView] = useState("dashboard");
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [toast, setToast] = useState(null);
+
+  const notify = (msg) => {
+    setToast(msg);
+    setTimeout(() => setToast(null), 2400);
+  };
+
+  return (
+    <div className="bt-app">
+      <style>{CSS}</style>
+      <Sidebar view={view} setView={(v) => { setView(v); setSidebarOpen(false); }} open={sidebarOpen} />
+      <div className="bt-main">
+        <TopBar view={view} onMenu={() => setSidebarOpen((s) => !s)} notify={notify} />
+        <div className="bt-content">
+          {view === "dashboard" && <DashboardView notify={notify} />}
+          {view === "agenda" && <AgendaView notify={notify} />}
+          {view === "planosQuadra" && <ProdutosQuadraView notify={notify} />}
+          {view === "mesas" && <MesasView notify={notify} />}
+          {view === "produtosBar" && <ProdutosBarView notify={notify} />}
+          {view === "clientes" && <ClientesView notify={notify} />}
+          {view === "vendas" && <VendasView notify={notify} />}
+          {view === "relatorios" && <RelatoriosView notify={notify} />}
+          {view === "config" && <ConfiguracoesView notify={notify} />}
+        </div>
+      </div>
+      {toast && <div className="bt-toast">{toast}</div>}
+      {sidebarOpen && <div className="bt-overlay" onClick={() => setSidebarOpen(false)} />}
+    </div>
+  );
+}

@@ -42,6 +42,21 @@ Tudo fica em um único arquivo: `src/brand.js`. Trocar a logo é só substituir
 o arquivo `src/assets/kanoa-logo.jpg` por outro com o mesmo nome (ou apontar
 o `import` para o novo arquivo).
 
+## Painel administrativo
+
+O painel agora faz parte deste mesmo projeto, em `/admin` (ex.:
+`https://seu-site.netlify.app/admin`). Ele pede uma senha simples antes de
+entrar — está definida em `src/components/AdminGate.jsx` (senha padrão:
+`kanoa2026`, troque antes de divulgar o link).
+
+**Isso não é segurança de verdade.** É uma trava só para evitar acesso por
+engano — como o código roda no navegador de quem acessa, dá para contornar.
+O painel ainda funciona com dados fictícios (mock), então o risco hoje é
+baixo, mas antes de ligar isso a dados reais de clientes (Supabase), troque
+por autenticação de verdade — o cadastro de funcionários e permissões por
+aba já está desenhado dentro do próprio painel, faltando só conectar a um
+sistema de login real.
+
 ## Próximo passo: conectar ao Supabase
 
 Quando quiser que os horários e agendamentos sejam reais (e não mais mock):
