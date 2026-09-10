@@ -17,6 +17,9 @@ import {
   fetchStaff, upsertStaff, toggleStaffStatus,
   fetchSetting, saveSetting,
   fetchDashboardStats, fetchMonthBookingsRaw,
+  fetchTablesWithStatus, findCustomerByPhone, openTableSession,
+  fetchSessionItems, addOrderItem, updateOrderItemQuantity, removeOrderItem, closeTableSession,
+  uploadProductImage,
 } from "../admin/adminData";
 
 /* =========================================================================
@@ -108,6 +111,14 @@ const CSS = `
   .bt-bar-mini{ height:8px; border-radius:5px; background:var(--court); }
   .bt-bar-track{ height:8px; border-radius:5px; background:var(--border); flex:1; }
   .bt-avatar{ width:34px;height:34px;border-radius:50%; background:var(--court-soft); color:var(--court); display:flex; align-items:center; justify-content:center; font-weight:800; font-size:13px; font-family:var(--font-display); flex-shrink:0; }
+  .bt-tables-grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(148px,1fr)); gap:13px; }
+  .bt-table-card{ border:1.6px solid var(--border); border-radius:12px; padding:12px; cursor:pointer; background:var(--surface); transition:transform .12s ease, box-shadow .12s ease; }
+  .bt-table-card:hover{ transform:translateY(-2px); box-shadow:0 8px 18px rgba(20,33,54,.09); }
+  .bt-table-card.st-ocupada{ border-color:var(--brand); background:var(--warning-soft); }
+  .bt-table-num{ font-family:var(--font-display); font-weight:800; font-size:15px; }
+  .bt-item-row{ display:flex; justify-content:space-between; align-items:center; padding:9px 0; border-bottom:1px solid var(--border); font-size:13.5px; gap:8px; }
+  .bt-qty-btn{ width:22px;height:22px;border-radius:6px;border:1px solid var(--border);background:var(--surface-alt);cursor:pointer;font-size:13px;line-height:1;display:inline-flex;align-items:center;justify-content:center; }
+  .bt-photo-thumb{ width:44px; height:44px; border-radius:8px; object-fit:cover; flex-shrink:0; background:var(--surface-alt); }
   .bt-menu-btn{ display:none; align-items:center; justify-content:center; width:34px; height:34px; border-radius:8px; border:1px solid var(--border); background:var(--surface); cursor:pointer; flex-shrink:0; }
   @media (max-width: 900px){
     .bt-grid-2, .bt-grid-3{ grid-template-columns:1fr; }
@@ -697,7 +708,9 @@ function ProductsCrud({ productType, notify, showCategory }) {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState(null);
-  const [form, setForm] = useState({ name: "", description: "", price: "", category: "Bebidas" });
+  const [form, setForm] = useState({ name: "", description: "", price: "", category: "Bebidas", image_url: "" });
+  const [imageFile, setImageFile] = useState(null);
+  const [uploading, setUploading] = useState(false);
 
   const load = async () => {
     setLoading(true);
@@ -706,12 +719,24 @@ function ProductsCrud({ productType, notify, showCategory }) {
   };
   useEffect(() => { load(); }, []);
 
-  const startCreate = () => { setEditingId(null); setForm({ name: "", description: "", price: "", category: "Bebidas" }); setShowForm(true); };
-  const startEdit = (p) => { setEditingId(p.id); setForm({ name: p.name, description: p.description || "", price: p.price, category: p.category || "Bebidas" }); setShowForm(true); };
+  const startCreate = () => { setEditingId(null); setForm({ name: "", description: "", price: "", category: "Bebidas", image_url: "" }); setImageFile(null); setShowForm(true); };
+  const startEdit = (p) => { setEditingId(p.id); setForm({ name: p.name, description: p.description || "", price: p.price, category: p.category || "Bebidas", image_url: p.image_url || "" }); setImageFile(null); setShowForm(true); };
 
   const save = async () => {
     if (!form.name.trim() || !form.price) { notify("Nome e preço são obrigatórios."); return; }
-    const payload = { product_type: productType, name: form.name, description: form.description, price: Number(form.price) };
+    let imageUrl = form.image_url;
+    if (imageFile) {
+      setUploading(true);
+      try {
+        imageUrl = await uploadProductImage(imageFile);
+      } catch (e) {
+        notify("Erro ao enviar imagem: " + e.message);
+        setUploading(false);
+        return;
+      }
+      setUploading(false);
+    }
+    const payload = { product_type: productType, name: form.name, description: form.description, price: Number(form.price), image_url: imageUrl || null };
     if (showCategory) payload.category = form.category;
     try {
       if (editingId) await updateProduct(editingId, payload);
@@ -751,19 +776,29 @@ function ProductsCrud({ productType, notify, showCategory }) {
               </select>
             </div>
           )}
+          <div className="bt-field">
+            <div className="bt-label">Foto</div>
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              {(imageFile || form.image_url) && (
+                <img src={imageFile ? URL.createObjectURL(imageFile) : form.image_url} alt="" className="bt-photo-thumb" />
+              )}
+              <input type="file" accept="image/*" onChange={(e) => setImageFile(e.target.files?.[0] || null)} />
+            </div>
+          </div>
           <div style={{ display: "flex", gap: 8 }}>
             <button className="bt-btn bt-btn-ghost bt-btn-sm" onClick={() => setShowForm(false)}>Cancelar</button>
-            <button className="bt-btn bt-btn-primary bt-btn-sm" onClick={save}>Salvar</button>
+            <button className="bt-btn bt-btn-primary bt-btn-sm" disabled={uploading} onClick={save}>{uploading ? "Enviando foto..." : "Salvar"}</button>
           </div>
         </div>
       )}
 
       {loading ? <div className="bt-card-sub">Carregando...</div> : (
         <table className="bt-table">
-          <thead><tr><th>Nome</th><th>Descrição</th>{showCategory && <th>Categoria</th>}<th>Preço</th><th>Status</th><th></th></tr></thead>
+          <thead><tr><th></th><th>Nome</th><th>Descrição</th>{showCategory && <th>Categoria</th>}<th>Preço</th><th>Status</th><th></th></tr></thead>
           <tbody>
             {products.map((p) => (
               <tr key={p.id}>
+                <td>{p.image_url ? <img src={p.image_url} alt="" className="bt-photo-thumb" /> : <div className="bt-photo-thumb" />}</td>
                 <td style={{ fontWeight: 600 }}>{p.name}</td>
                 <td style={{ color: "var(--ink-soft)" }}>{p.description}</td>
                 {showCategory && <td><span className="bt-badge bt-badge-muted">{p.category}</span></td>}
@@ -783,17 +818,256 @@ function ProductsCrud({ productType, notify, showCategory }) {
 }
 
 /* =========================================================================
-   MESAS — ainda não tem tabela no banco (próxima etapa de schema)
+   MESAS / COMANDAS — reais, com abertura, lançamento de itens e fechamento
    ========================================================================= */
-function MesasView() {
+function AbrirMesaPanel({ table, onClose, notify, onOpened }) {
+  const [nome, setNome] = useState("");
+  const [telefone, setTelefone] = useState("");
+  const [foundCustomer, setFoundCustomer] = useState(null);
+  const [pessoas, setPessoas] = useState(1);
+  const [saving, setSaving] = useState(false);
+
+  const lookupPhone = async () => {
+    if (!telefone.trim()) return;
+    const c = await findCustomerByPhone(telefone);
+    setFoundCustomer(c);
+    if (c) setNome(c.name);
+  };
+
+  const submit = async () => {
+    setSaving(true);
+    try {
+      await openTableSession({
+        tableId: table.id,
+        customerId: foundCustomer?.id || null,
+        customerName: nome || null,
+        customerPhone: telefone || null,
+        peopleCount: pessoas,
+      });
+      notify(`Mesa ${table.number} aberta.`);
+      onOpened();
+      onClose();
+    } catch (e) {
+      notify("Erro ao abrir mesa: " + e.message);
+    }
+    setSaving(false);
+  };
+
   return (
-    <div className="bt-card">
-      <div className="bt-card-title" style={{ marginBottom: 8 }}>Mesas</div>
-      <div className="bt-card-sub">
-        Este módulo ainda não está conectado ao banco — faltam as tabelas de mesas e comandas,
-        que não fizeram parte do schema inicial (focado em agendamento de quadra e CRM).
-        Quando quiser seguir com isso, é um novo pedaço de SQL para rodar no Supabase.
+    <div className="bt-panel-overlay" onClick={onClose}>
+      <div className="bt-panel" onClick={(e) => e.stopPropagation()}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", marginBottom: 18 }} onClick={onClose}>
+          <ChevronLeft size={17} /> <span style={{ fontSize: 13, fontWeight: 700 }}>Fechar</span>
+        </div>
+        <div className="bt-card-title" style={{ fontSize: 19, marginBottom: 4 }}>Abrir Mesa {String(table.number).padStart(2, "0")}</div>
+        <div className="bt-card-sub" style={{ marginBottom: 18 }}>Nome e telefone são opcionais.</div>
+
+        <div className="bt-field">
+          <div className="bt-label">Telefone (opcional)</div>
+          <div style={{ display: "flex", gap: 8 }}>
+            <input className="bt-input" value={telefone} onChange={(e) => { setTelefone(e.target.value); setFoundCustomer(null); }} onBlur={lookupPhone} />
+          </div>
+          {foundCustomer && <div style={{ fontSize: 12.5, color: "var(--court)", marginTop: 6 }}>Cliente encontrado: {foundCustomer.name}</div>}
+        </div>
+        <div className="bt-field"><div className="bt-label">Nome (opcional)</div><input className="bt-input" value={nome} onChange={(e) => setNome(e.target.value)} /></div>
+        <div className="bt-field"><div className="bt-label">Quantidade de pessoas</div><input type="number" min={1} className="bt-input" value={pessoas} onChange={(e) => setPessoas(Number(e.target.value) || 1)} /></div>
+
+        <button className="bt-btn bt-btn-primary" style={{ width: "100%", justifyContent: "center" }} disabled={saving} onClick={submit}>
+          {saving ? "Abrindo..." : "Abrir mesa e lançar produtos"}
+        </button>
       </div>
+    </div>
+  );
+}
+
+function ComandaPanel({ table, notify, onClose, onClosed }) {
+  const [items, setItems] = useState([]);
+  const [products, setProducts] = useState([]);
+  const [addProductId, setAddProductId] = useState("");
+  const [addQty, setAddQty] = useState(1);
+  const [loading, setLoading] = useState(true);
+  const [serviceOn, setServiceOn] = useState(true);
+  const [couvertOn, setCouvertOn] = useState(false);
+  const [couvertValue, setCouvertValue] = useState(10);
+  const [pessoas, setPessoas] = useState(table.session.people_count || 1);
+  const [confirming, setConfirming] = useState(false);
+
+  const load = async () => {
+    setLoading(true);
+    setItems(await fetchSessionItems(table.session.id));
+    setLoading(false);
+  };
+  useEffect(() => { load(); fetchProducts("bar").then((all) => setProducts(all.filter((p) => p.status === "ativo"))); }, []);
+
+  const subtotal = items.reduce((s, it) => s + it.quantity * Number(it.unit_price), 0);
+  const serviceValue = serviceOn ? subtotal * 0.1 : 0;
+  const couvertTotal = couvertOn ? pessoas * couvertValue : 0;
+  const total = subtotal + serviceValue + couvertTotal;
+
+  const addItem = async () => {
+    if (!addProductId) return;
+    const product = products.find((p) => p.id === addProductId);
+    await addOrderItem({ sessionId: table.session.id, productId: addProductId, quantity: addQty, unitPrice: product.price });
+    setAddProductId(""); setAddQty(1);
+    load();
+  };
+  const changeQty = async (item, delta) => {
+    const next = Math.max(1, item.quantity + delta);
+    await updateOrderItemQuantity(item.id, next);
+    load();
+  };
+  const removeItem = async (item) => {
+    await removeOrderItem(item.id);
+    load();
+  };
+
+  const confirmClose = async () => {
+    try {
+      await closeTableSession(table.session.id, {
+        serviceChargeEnabled: serviceOn, coverChargeEnabled: couvertOn, coverChargePerPerson: couvertOn ? couvertValue : 0,
+        subtotal, total,
+      });
+      notify(`Mesa ${table.number} fechada — consumo registrado.`);
+      onClosed();
+      onClose();
+    } catch (e) {
+      notify("Erro ao fechar mesa: " + e.message);
+    }
+  };
+
+  const customerName = table.session.customers?.name || table.session.customer_name_snapshot;
+  const customerPhone = table.session.customers?.phone || table.session.customer_phone_snapshot;
+
+  return (
+    <div className="bt-panel-overlay" onClick={onClose}>
+      <div className="bt-panel" onClick={(e) => e.stopPropagation()}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", marginBottom: 16 }} onClick={onClose}>
+          <ChevronLeft size={17} /> <span style={{ fontSize: 13, fontWeight: 700 }}>Fechar</span>
+        </div>
+        <div className="bt-card-title" style={{ fontSize: 19 }}>Mesa {String(table.number).padStart(2, "0")}</div>
+        <div style={{ display: "flex", justifyContent: "space-between", marginTop: 14, marginBottom: 18 }}>
+          <div>
+            <div className="bt-label">Cliente</div>
+            <div style={{ fontSize: 14, fontWeight: 600 }}>{customerName || "Não identificado"}</div>
+            {customerPhone && <div style={{ fontSize: 12, color: "var(--ink-soft)" }}>{customerPhone}</div>}
+          </div>
+          {customerPhone && <button className="bt-btn bt-btn-ghost bt-btn-sm" onClick={() => openWhatsapp(customerPhone)}><MessageCircle size={14} /> WhatsApp</button>}
+        </div>
+
+        {!confirming ? (
+          <>
+            <div className="bt-row" style={{ marginBottom: 8 }}>
+              <div className="bt-card-title" style={{ fontSize: 13 }}>Itens da comanda</div>
+            </div>
+            <div style={{ display: "flex", gap: 6, marginBottom: 14 }}>
+              <select className="bt-select" value={addProductId} onChange={(e) => setAddProductId(e.target.value)}>
+                <option value="">Adicionar produto...</option>
+                {products.map((p) => <option key={p.id} value={p.id}>{p.name} — {formatBRL(p.price)}</option>)}
+              </select>
+              <input type="number" min={1} className="bt-input" style={{ width: 60 }} value={addQty} onChange={(e) => setAddQty(Number(e.target.value) || 1)} />
+              <button className="bt-btn bt-btn-primary bt-btn-sm" onClick={addItem}><Plus size={13} /></button>
+            </div>
+
+            {loading ? <div className="bt-card-sub">Carregando...</div> : items.length === 0 ? (
+              <div style={{ fontSize: 13, color: "var(--ink-soft)", padding: "10px 0" }}>Nenhum item lançado ainda.</div>
+            ) : items.map((it) => (
+              <div className="bt-item-row" key={it.id}>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontWeight: 600 }}>{it.products?.name}</div>
+                  <div style={{ fontSize: 11.5, color: "var(--ink-soft)" }}>{formatBRL(it.unit_price)} / un.</div>
+                </div>
+                <button className="bt-qty-btn" onClick={() => changeQty(it, -1)}><Minus size={12} /></button>
+                <span style={{ width: 18, textAlign: "center", fontWeight: 700 }}>{it.quantity}</span>
+                <button className="bt-qty-btn" onClick={() => changeQty(it, 1)}><Plus size={12} /></button>
+                <div style={{ width: 62, textAlign: "right", fontWeight: 700 }}>{formatBRL(it.quantity * it.unit_price)}</div>
+                <button className="bt-btn bt-btn-ghost bt-btn-sm" onClick={() => removeItem(it)}>×</button>
+              </div>
+            ))}
+
+            <div style={{ marginTop: 18, display: "flex", flexDirection: "column", gap: 10 }}>
+              <label className="bt-row" style={{ fontSize: 13 }}>
+                <span>Adicionar 10% de serviço</span>
+                <input type="checkbox" checked={serviceOn} onChange={(e) => setServiceOn(e.target.checked)} />
+              </label>
+              <label className="bt-row" style={{ fontSize: 13 }}>
+                <span>Cobrar couvert</span>
+                <input type="checkbox" checked={couvertOn} onChange={(e) => setCouvertOn(e.target.checked)} />
+              </label>
+              {couvertOn && (
+                <div style={{ display: "flex", gap: 8 }}>
+                  <div style={{ flex: 1 }}><div className="bt-label">Pessoas</div><input type="number" min={1} className="bt-input" value={pessoas} onChange={(e) => setPessoas(Number(e.target.value) || 1)} /></div>
+                  <div style={{ flex: 1 }}><div className="bt-label">Valor / pessoa</div><input type="number" min={0} className="bt-input" value={couvertValue} onChange={(e) => setCouvertValue(Number(e.target.value) || 0)} /></div>
+                </div>
+              )}
+            </div>
+
+            <div style={{ marginTop: 18, borderTop: "1px solid var(--border)", paddingTop: 14, display: "flex", flexDirection: "column", gap: 6, fontSize: 13.5 }}>
+              <div className="bt-row"><span>Subtotal</span><span>{formatBRL(subtotal)}</span></div>
+              {serviceOn && <div className="bt-row"><span>Serviço 10%</span><span>{formatBRL(serviceValue)}</span></div>}
+              {couvertOn && <div className="bt-row"><span>Couvert ({pessoas} pessoas)</span><span>{formatBRL(couvertTotal)}</span></div>}
+              <div className="bt-row" style={{ fontFamily: "var(--font-display)", fontWeight: 800, fontSize: 16, marginTop: 4 }}>
+                <span>Total</span><span>{formatBRL(total)}</span>
+              </div>
+            </div>
+
+            <button className="bt-btn bt-btn-primary" style={{ width: "100%", justifyContent: "center", marginTop: 20 }} onClick={() => setConfirming(true)}>Fechar mesa</button>
+          </>
+        ) : (
+          <div>
+            <div className="bt-card" style={{ background: "var(--surface-alt)" }}>
+              <div className="bt-card-title" style={{ marginBottom: 10 }}>Resumo do fechamento</div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 6, fontSize: 13.5 }}>
+                <div className="bt-row"><span>Produtos</span><span>{formatBRL(subtotal)}</span></div>
+                {serviceOn && <div className="bt-row"><span>Serviço 10%</span><span>{formatBRL(serviceValue)}</span></div>}
+                {couvertOn && <div className="bt-row"><span>Couvert</span><span>{formatBRL(couvertTotal)}</span></div>}
+                <div className="bt-row" style={{ fontFamily: "var(--font-display)", fontWeight: 800, fontSize: 17, marginTop: 6, borderTop: "1px solid var(--border)", paddingTop: 8 }}>
+                  <span>Total</span><span>{formatBRL(total)}</span>
+                </div>
+              </div>
+            </div>
+            <div style={{ display: "flex", gap: 8, marginTop: 16 }}>
+              <button className="bt-btn bt-btn-ghost" style={{ flex: 1 }} onClick={() => setConfirming(false)}>Voltar</button>
+              <button className="bt-btn bt-btn-primary" style={{ flex: 1 }} onClick={confirmClose}>Confirmar fechamento</button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function MesasView({ notify }) {
+  const [tables, setTables] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [selected, setSelected] = useState(null);
+
+  const load = async () => {
+    setLoading(true);
+    setTables(await fetchTablesWithStatus());
+    setLoading(false);
+  };
+  useEffect(() => { load(); }, []);
+
+  return (
+    <div>
+      {loading ? <div className="bt-card-sub">Carregando mesas...</div> : (
+        <div className="bt-tables-grid">
+          {tables.map((t) => (
+            <div key={t.id} className={`bt-table-card ${t.session ? "st-ocupada" : ""}`} onClick={() => setSelected(t)}>
+              <div className="bt-table-num">Mesa {String(t.number).padStart(2, "0")}</div>
+              {t.session ? (
+                <div style={{ marginTop: 6 }}>
+                  <span className="bt-badge bt-badge-warning">Ocupada</span>
+                  <div style={{ fontSize: 12.5, fontWeight: 600, marginTop: 6 }}>{t.session.customers?.name || t.session.customer_name_snapshot || "Não identificado"}</div>
+                  <div style={{ fontSize: 11.5, color: "var(--ink-soft)" }}>{t.session.people_count} pessoas</div>
+                </div>
+              ) : <span className="bt-badge bt-badge-muted">Livre</span>}
+            </div>
+          ))}
+        </div>
+      )}
+      {selected && !selected.session && <AbrirMesaPanel table={selected} onClose={() => setSelected(null)} notify={notify} onOpened={load} />}
+      {selected && selected.session && <ComandaPanel table={selected} onClose={() => setSelected(null)} notify={notify} onClosed={load} />}
     </div>
   );
 }

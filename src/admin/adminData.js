@@ -170,6 +170,93 @@ export async function toggleProductStatus(id, currentStatus) {
 
 /* ===================== VENDAS ===================== */
 
+/* ===================== MESAS / COMANDAS ===================== */
+
+export async function fetchTablesWithStatus() {
+  const { data: tables, error: tErr } = await supabase.from("restaurant_tables").select("*").order("number");
+  if (tErr) throw tErr;
+  const { data: sessions, error: sErr } = await supabase
+    .from("table_sessions")
+    .select("id, table_id, customer_id, customer_name_snapshot, customer_phone_snapshot, people_count, opened_at, customers(name, phone)")
+    .is("closed_at", null);
+  if (sErr) throw sErr;
+  const byTable = {};
+  sessions.forEach((s) => { byTable[s.table_id] = s; });
+  return tables.map((t) => ({ ...t, session: byTable[t.id] || null }));
+}
+
+export async function findCustomerByPhone(phone) {
+  const { data, error } = await supabase.from("customers").select("*").eq("phone", phone).maybeSingle();
+  if (error) throw error;
+  return data;
+}
+
+export async function openTableSession({ tableId, customerId, customerName, customerPhone, peopleCount }) {
+  const { data: userData } = await supabase.auth.getUser();
+  const { error } = await supabase.from("table_sessions").insert({
+    table_id: tableId,
+    customer_id: customerId || null,
+    customer_name_snapshot: customerName || null,
+    customer_phone_snapshot: customerPhone || null,
+    people_count: peopleCount || 1,
+    opened_by: userData?.user?.id || null,
+  });
+  if (error) throw error;
+}
+
+export async function fetchSessionItems(sessionId) {
+  const { data, error } = await supabase
+    .from("order_items")
+    .select("id, quantity, unit_price, products(name)")
+    .eq("session_id", sessionId)
+    .order("added_at");
+  if (error) throw error;
+  return data;
+}
+
+export async function addOrderItem({ sessionId, productId, quantity, unitPrice }) {
+  const { data: userData } = await supabase.auth.getUser();
+  const { error } = await supabase.from("order_items").insert({
+    session_id: sessionId, product_id: productId, quantity, unit_price: unitPrice, added_by: userData?.user?.id || null,
+  });
+  if (error) throw error;
+}
+
+export async function updateOrderItemQuantity(id, quantity) {
+  const { error } = await supabase.from("order_items").update({ quantity }).eq("id", id);
+  if (error) throw error;
+}
+
+export async function removeOrderItem(id) {
+  const { error } = await supabase.from("order_items").delete().eq("id", id);
+  if (error) throw error;
+}
+
+export async function closeTableSession(sessionId, { serviceChargeEnabled, coverChargeEnabled, coverChargePerPerson, subtotal, total }) {
+  const { data: userData } = await supabase.auth.getUser();
+  const { error } = await supabase.from("table_sessions").update({
+    closed_at: new Date().toISOString(),
+    service_charge_enabled: serviceChargeEnabled,
+    cover_charge_enabled: coverChargeEnabled,
+    cover_charge_per_person: coverChargePerPerson,
+    subtotal,
+    total,
+    closed_by: userData?.user?.id || null,
+  }).eq("id", sessionId);
+  if (error) throw error;
+}
+
+/* ===================== IMAGEM DE PRODUTO ===================== */
+
+export async function uploadProductImage(file) {
+  const ext = file.name.split(".").pop();
+  const path = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+  const { error } = await supabase.storage.from("product-images").upload(path, file);
+  if (error) throw error;
+  const { data } = supabase.storage.from("product-images").getPublicUrl(path);
+  return data.publicUrl;
+}
+
 export async function fetchAllActiveProducts() {
   const { data, error } = await supabase.from("products").select("*").eq("status", "ativo").order("name");
   if (error) throw error;
