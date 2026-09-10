@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import {
   LayoutDashboard, CalendarDays, Users, ClipboardList, UtensilsCrossed,
   Table2, ShoppingCart, FileBarChart, Settings, Search, Phone,
-  MessageCircle, ChevronLeft, Plus, Minus, LogOut
+  MessageCircle, ChevronLeft, Plus, Minus, LogOut, Menu
 } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip, CartesianGrid } from "recharts";
 import { BRAND } from "../brand";
@@ -108,7 +108,15 @@ const CSS = `
   .bt-bar-mini{ height:8px; border-radius:5px; background:var(--court); }
   .bt-bar-track{ height:8px; border-radius:5px; background:var(--border); flex:1; }
   .bt-avatar{ width:34px;height:34px;border-radius:50%; background:var(--court-soft); color:var(--court); display:flex; align-items:center; justify-content:center; font-weight:800; font-size:13px; font-family:var(--font-display); flex-shrink:0; }
-  @media (max-width: 900px){ .bt-grid-2, .bt-grid-3{ grid-template-columns:1fr; } }
+  .bt-menu-btn{ display:none; align-items:center; justify-content:center; width:34px; height:34px; border-radius:8px; border:1px solid var(--border); background:var(--surface); cursor:pointer; flex-shrink:0; }
+  @media (max-width: 900px){
+    .bt-grid-2, .bt-grid-3{ grid-template-columns:1fr; }
+    .bt-sidebar{ position:fixed; left:0; top:0; bottom:0; transform:translateX(-100%); transition:transform .2s ease; }
+    .bt-sidebar.open{ transform:translateX(0); }
+    .bt-menu-btn{ display:inline-flex; }
+    .bt-card{ overflow-x:auto; }
+    .bt-content{ padding:18px 14px 32px; }
+  }
 `;
 
 function formatBRL(n) {
@@ -211,13 +219,16 @@ function Sidebar({ view, setView, open, staff }) {
   );
 }
 
-function TopBar({ view, staff, onLogout }) {
+function TopBar({ view, staff, onLogout, onMenu }) {
   const meta = VIEW_META[view];
   return (
     <div className="bt-topbar">
-      <div>
-        <div className="bt-topbar-title">{meta.title}</div>
-        <div className="bt-topbar-sub">{meta.sub}</div>
+      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+        <button className="bt-menu-btn" onClick={onMenu}><Menu size={17} /></button>
+        <div>
+          <div className="bt-topbar-title">{meta.title}</div>
+          <div className="bt-topbar-sub">{meta.sub}</div>
+        </div>
       </div>
       <button className="bt-btn bt-btn-ghost bt-btn-sm" onClick={onLogout}><LogOut size={14} /> Sair</button>
     </div>
@@ -1158,7 +1169,7 @@ export default function AdminPanel({ staff, onLogout }) {
       <style>{CSS}</style>
       <Sidebar view={view} setView={(v) => { setView(v); setSidebarOpen(false); }} open={sidebarOpen} staff={staff} />
       <div className="bt-main">
-        <TopBar view={view} staff={staff} onLogout={onLogout} />
+        <TopBar view={view} staff={staff} onLogout={onLogout} onMenu={() => setSidebarOpen((s) => !s)} />
         <div className="bt-content">
           {view === "dashboard" && <DashboardView />}
           {view === "agenda" && <AgendaView notify={notify} />}

@@ -44,7 +44,14 @@ export default function AdminGate() {
       await signIn(email, password);
       await loadStaff();
     } catch (err) {
-      setError("E-mail ou senha incorretos.");
+      const raw = (err.message || "").toLowerCase();
+      if (raw.includes("email not confirmed")) {
+        setError("Este e-mail ainda não foi confirmado no Supabase. Recrie o usuário em Authentication → Users marcando 'Auto Confirm User'.");
+      } else if (raw.includes("invalid login credentials")) {
+        setError("E-mail ou senha incorretos.");
+      } else {
+        setError(err.message || "Não foi possível entrar. Tente novamente.");
+      }
     }
     setLoading(false);
   };
