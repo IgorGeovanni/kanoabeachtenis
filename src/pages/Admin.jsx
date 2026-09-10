@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import {
   LayoutDashboard, CalendarDays, Users, ClipboardList, UtensilsCrossed,
   Table2, ShoppingCart, FileBarChart, Settings, Search, Phone,
-  MessageCircle, ChevronLeft, Plus, Minus, LogOut, Menu, Repeat
+  MessageCircle, ChevronLeft, Plus, Minus, LogOut, Menu, Repeat, Wallet
 } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip, CartesianGrid } from "recharts";
 import { BRAND } from "../brand";
@@ -20,6 +20,7 @@ import {
   fetchTablesWithStatus, findCustomerByPhone, openTableSession,
   fetchSessionItems, addOrderItem, updateOrderItemQuantity, removeOrderItem, closeTableSession,
   fetchSessionPayments, addSessionPayment, removeSessionPayment,
+  fetchDebts, settleDebt,
   fetchRecurringBookings, createRecurringBooking, cancelRecurringBooking,
   uploadProductImage, fetchAuditLogs,
 } from "../admin/adminData";
@@ -179,6 +180,7 @@ const NAV_GROUPS = [
   { label: "Relacionamento", items: [{ id: "clientes", label: "Clientes (CRM)", icon: Users, permKey: "Clientes (CRM)" }] },
   { label: "Gestão", items: [
     { id: "vendas", label: "Vendas", icon: ShoppingCart, permKey: "Vendas" },
+    { id: "devedores", label: "Devedores", icon: Wallet, permKey: "Devedores" },
     { id: "relatorios", label: "Relatórios", icon: FileBarChart, permKey: "Relatórios" },
     { id: "config", label: "Configurações", icon: Settings, permKey: "Configurações" },
   ]},
@@ -193,6 +195,7 @@ const VIEW_META = {
   produtosBar: { title: "Cardápio / Produtos do Bar", sub: "Itens disponíveis para venda no bar" },
   clientes: { title: "Clientes", sub: "CRM — relacionamento completo com o cliente" },
   vendas: { title: "Vendas", sub: "Lançamentos avulsos e recorrentes" },
+  devedores: { title: "Devedores", sub: "Consumo em crediário e quitações" },
   relatorios: { title: "Relatórios", sub: "Estrutura modular, pronta para expansão" },
   config: { title: "Configurações", sub: "Dados do estabelecimento e preferências" },
 };
@@ -842,9 +845,10 @@ function ProductsCrud({ productType, notify, showCategory }) {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState(null);
-  const [form, setForm] = useState({ name: "", description: "", price: "", category: "Bebidas", image_url: "" });
+  const [form, setForm] = useState({ name: "", description: "", price: "", category: "Bebidas", image_url: "", show_in_menu: true });
   const [imageFile, setImageFile] = useState(null);
   const [uploading, setUploading] = useState(false);
+  const [dragging, setDragging] = useState(false);
 
   const load = async () => {
     setLoading(true);
@@ -853,8 +857,8 @@ function ProductsCrud({ productType, notify, showCategory }) {
   };
   useEffect(() => { load(); }, []);
 
-  const startCreate = () => { setEditingId(null); setForm({ name: "", description: "", price: "", category: "Bebidas", image_url: "" }); setImageFile(null); setShowForm(true); };
-  const startEdit = (p) => { setEditingId(p.id); setForm({ name: p.name, description: p.description || "", price: p.price, category: p.category || "Bebidas", image_url: p.image_url || "" }); setImageFile(null); setShowForm(true); };
+  const startCreate = () => { setEditingId(null); setForm({ name: "", description: "", price: "", category: "Bebidas", image_url: "", show_in_menu: true }); setImageFile(null); setShowForm(true); };
+  const startEdit = (p) => { setEditingId(p.id); setForm({ name: p.name, description: p.description || "", price: p.price, category: p.category || "Bebidas", image_url: p.image_url || "", show_in_menu: p.show_in_menu !== false }); setImageFile(null); setShowForm(true); };
 
   const save = async () => {
     if (!form.name.trim() || !form.price) { notify("Nome e preço são obrigatórios."); return; }
@@ -871,7 +875,7 @@ function ProductsCrud({ productType, notify, showCategory }) {
       setUploading(false);
     }
     const payload = { product_type: productType, name: form.name, description: form.description, price: Number(form.price), image_url: imageUrl || null };
-    if (showCategory) payload.category = form.category;
+    if (showCategory) { payload.category = form.category; payload.show_in_menu = form.show_in_menu; }
     try {
       if (editingId) await updateProduct(editingId, payload);
       else await createProduct(payload);
@@ -886,6 +890,13 @@ function ProductsCrud({ productType, notify, showCategory }) {
   const toggle = async (p) => {
     await toggleProductStatus(p.id, p.status);
     load();
+  };
+
+  const onDrop = (e) => {
+    e.preventDefault();
+    setDragging(false);
+    const file = e.dataTransfer.files?.[0];
+    if (file && file.type.startsWith("image/")) setImageFile(file);
   };
 
   return (
@@ -910,13 +921,33 @@ function ProductsCrud({ productType, notify, showCategory }) {
               </select>
             </div>
           )}
+          {showCategory && (
+            <label className="bt-row" style={{ fontSize: 13, marginBottom: 14 }}>
+              <span>Mostrar no cardápio público (além do painel de mesas)</span>
+              <input type="checkbox" checked={form.show_in_menu} onChange={(e) => setForm({ ...form, show_in_menu: e.target.checked })} />
+            </label>
+          )}
           <div className="bt-field">
             <div className="bt-label">Foto</div>
-            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              {(imageFile || form.image_url) && (
+            <div
+              onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
+              onDragLeave={() => setDragging(false)}
+              onDrop={onDrop}
+              style={{
+                display: "flex", alignItems: "center", gap: 12, padding: 12, borderRadius: 10,
+                border: `1.5px dashed ${dragging ? "var(--brand)" : "var(--border)"}`,
+                background: dragging ? "var(--warning-soft)" : "transparent",
+              }}
+            >
+              {(imageFile || form.image_url) ? (
                 <img src={imageFile ? URL.createObjectURL(imageFile) : form.image_url} alt="" className="bt-photo-thumb" />
+              ) : (
+                <div className="bt-photo-thumb" />
               )}
-              <input type="file" accept="image/*" onChange={(e) => setImageFile(e.target.files?.[0] || null)} />
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 12.5, color: "var(--ink-soft)", marginBottom: 6 }}>Arraste uma imagem aqui, ou:</div>
+                <input type="file" accept="image/*" onChange={(e) => setImageFile(e.target.files?.[0] || null)} />
+              </div>
             </div>
           </div>
           <div style={{ display: "flex", gap: 8 }}>
@@ -928,7 +959,7 @@ function ProductsCrud({ productType, notify, showCategory }) {
 
       {loading ? <div className="bt-card-sub">Carregando...</div> : (
         <table className="bt-table">
-          <thead><tr><th></th><th>Nome</th><th>Descrição</th>{showCategory && <th>Categoria</th>}<th>Preço</th><th>Status</th><th></th></tr></thead>
+          <thead><tr><th></th><th>Nome</th><th>Descrição</th>{showCategory && <th>Categoria</th>}{showCategory && <th>Cardápio</th>}<th>Preço</th><th>Status</th><th></th></tr></thead>
           <tbody>
             {products.map((p) => (
               <tr key={p.id}>
@@ -936,6 +967,7 @@ function ProductsCrud({ productType, notify, showCategory }) {
                 <td style={{ fontWeight: 600 }}>{p.name}</td>
                 <td style={{ color: "var(--ink-soft)" }}>{p.description}</td>
                 {showCategory && <td><span className="bt-badge bt-badge-muted">{p.category}</span></td>}
+                {showCategory && <td>{p.show_in_menu !== false ? <span className="bt-badge bt-badge-success">Cardápio + Mesas</span> : <span className="bt-badge bt-badge-muted">Só Mesas</span>}</td>}
                 <td>{formatBRL(p.price)}</td>
                 <td><StatusBadge status={p.status} /></td>
                 <td style={{ textAlign: "right" }}>
@@ -1031,6 +1063,9 @@ function ComandaPanel({ table, notify, onClose, onClosed }) {
   const [payments, setPayments] = useState([]);
   const [payerName, setPayerName] = useState("");
   const [payerAmount, setPayerAmount] = useState("");
+  const [isCredit, setIsCredit] = useState(false);
+  const [creditPhone, setCreditPhone] = useState("");
+  const [creditCustomer, setCreditCustomer] = useState(null);
 
   const load = async () => {
     setLoading(true);
@@ -1064,12 +1099,31 @@ function ComandaPanel({ table, notify, onClose, onClosed }) {
     load();
   };
 
+  const lookupCreditCustomer = async () => {
+    if (!creditPhone.trim()) return;
+    const c = await findCustomerByPhone(creditPhone);
+    setCreditCustomer(c);
+    if (!c) notify("Cliente não encontrado — para fiar, o cliente precisa estar cadastrado no CRM.");
+  };
+
   const addPayment = async () => {
     const amt = Number(payerAmount);
     if (!amt || amt <= 0) { notify("Informe um valor válido."); return; }
-    await addSessionPayment({ sessionId: table.session.id, payerName, amount: amt });
-    setPayerName(""); setPayerAmount("");
-    loadPayments();
+    if (isCredit && !creditCustomer) { notify("Busque e confirme o cliente pelo telefone para lançar no crediário."); return; }
+    try {
+      await addSessionPayment({
+        sessionId: table.session.id,
+        payerName: isCredit ? creditCustomer.name : payerName,
+        amount: amt,
+        isCredit,
+        customerId: isCredit ? creditCustomer.id : null,
+        tableNumber: table.number,
+      });
+      setPayerName(""); setPayerAmount(""); setIsCredit(false); setCreditPhone(""); setCreditCustomer(null);
+      loadPayments();
+    } catch (e) {
+      notify("Erro ao lançar pagamento: " + e.message);
+    }
   };
   const removePayment = async (id) => { await removeSessionPayment(id); loadPayments(); };
 
@@ -1171,7 +1225,7 @@ function ComandaPanel({ table, notify, onClose, onClosed }) {
                 <div style={{ marginBottom: 10 }}>
                   {payments.map((p) => (
                     <div className="bt-item-row" key={p.id}>
-                      <div style={{ flex: 1 }}>{p.payer_name || "Sem nome"}</div>
+                      <div style={{ flex: 1 }}>{p.payer_name || "Sem nome"}{p.is_credit && <span className="bt-badge bt-badge-warning" style={{ marginLeft: 6 }}>Crediário</span>}</div>
                       <div style={{ fontWeight: 700 }}>{formatBRL(p.amount)}</div>
                       <button className="bt-btn bt-btn-ghost bt-btn-sm" onClick={() => removePayment(p.id)}>×</button>
                     </div>
@@ -1179,10 +1233,20 @@ function ComandaPanel({ table, notify, onClose, onClosed }) {
                 </div>
               )}
               <div style={{ display: "flex", gap: 6 }}>
-                <input className="bt-input" placeholder="Nome (opcional)" value={payerName} onChange={(e) => setPayerName(e.target.value)} />
+                {!isCredit && <input className="bt-input" placeholder="Nome (opcional)" value={payerName} onChange={(e) => setPayerName(e.target.value)} />}
+                {isCredit && (
+                  <div style={{ flex: 1, display: "flex", gap: 6 }}>
+                    <input className="bt-input" placeholder="Telefone do cliente" value={creditPhone} onChange={(e) => { setCreditPhone(e.target.value); setCreditCustomer(null); }} onBlur={lookupCreditCustomer} />
+                  </div>
+                )}
                 <input type="number" min={0} step="0.01" className="bt-input" style={{ width: 100 }} placeholder="Valor" value={payerAmount} onChange={(e) => setPayerAmount(e.target.value)} />
                 <button className="bt-btn bt-btn-primary bt-btn-sm" onClick={addPayment}><Plus size={13} /></button>
               </div>
+              <label className="bt-row" style={{ fontSize: 12.5, marginTop: 6 }}>
+                <span>Lançar como crediário (fiado)</span>
+                <input type="checkbox" checked={isCredit} onChange={(e) => { setIsCredit(e.target.checked); setPayerName(""); }} />
+              </label>
+              {isCredit && creditCustomer && <div style={{ fontSize: 12, color: "var(--court)", marginTop: 4 }}>Cliente: {creditCustomer.name}</div>}
               {payments.length > 0 && (
                 <div style={{ marginTop: 10, fontSize: 13 }}>
                   <div className="bt-row"><span>Recebido até agora</span><span style={{ fontWeight: 700 }}>{formatBRL(paidSoFar)}</span></div>
@@ -1368,6 +1432,99 @@ function VendasView({ notify }) {
           </table>
         )}
       </div>
+    </div>
+  );
+}
+
+/* =========================================================================
+   DEVEDORES — consumo em crediário (fiado) e quitação
+   ========================================================================= */
+function DevedoresView({ notify }) {
+  const [debts, setDebts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  const load = async () => {
+    setLoading(true);
+    try {
+      setDebts(await fetchDebts());
+      setError("");
+    } catch (e) {
+      setError("Você não tem permissão para ver esta área, ou houve um erro: " + e.message);
+    }
+    setLoading(false);
+  };
+  useEffect(() => { load(); }, []);
+
+  const baixar = async (d) => {
+    await settleDebt(d.id);
+    notify(`Baixa registrada — ${d.customers?.name}.`);
+    load();
+  };
+
+  const byCustomer = {};
+  debts.filter((d) => d.status === "pendente").forEach((d) => {
+    const key = d.customer_id;
+    if (!byCustomer[key]) byCustomer[key] = { name: d.customers?.name, phone: d.customers?.phone, total: 0, items: [] };
+    byCustomer[key].total += Number(d.amount);
+    byCustomer[key].items.push(d);
+  });
+  const groups = Object.values(byCustomer).sort((a, b) => b.total - a.total);
+  const paidDebts = debts.filter((d) => d.status === "pago");
+
+  if (error) return <div className="bt-card"><div className="bt-card-sub">{error}</div></div>;
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+      <div className="bt-card">
+        <div className="bt-card-title" style={{ marginBottom: 4 }}>Em aberto</div>
+        <div className="bt-card-sub" style={{ marginBottom: 14 }}>Consumo lançado como crediário nas mesas, ainda não quitado.</div>
+        {loading ? <div className="bt-card-sub">Carregando...</div> : groups.length === 0 ? (
+          <div className="bt-card-sub">Ninguém devendo no momento.</div>
+        ) : (
+          <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+            {groups.map((g) => (
+              <div key={g.name} style={{ border: "1px solid var(--border)", borderRadius: 10, padding: 12 }}>
+                <div className="bt-row" style={{ marginBottom: 8 }}>
+                  <div>
+                    <div style={{ fontWeight: 700, fontSize: 14 }}>{g.name}</div>
+                    <div style={{ fontSize: 12, color: "var(--ink-soft)" }}>{g.phone}</div>
+                  </div>
+                  <span className="bt-badge bt-badge-warning">Deve {formatBRL(g.total)}</span>
+                </div>
+                {g.items.map((d) => (
+                  <div key={d.id} className="bt-item-row">
+                    <div style={{ flex: 1 }}>
+                      <div>{d.description}</div>
+                      <div style={{ fontSize: 11.5, color: "var(--ink-faint)" }}>{new Date(d.created_at).toLocaleDateString("pt-BR")}</div>
+                    </div>
+                    <div style={{ fontWeight: 700 }}>{formatBRL(d.amount)}</div>
+                    <button className="bt-btn bt-btn-primary bt-btn-sm" onClick={() => baixar(d)}>Dar baixa</button>
+                  </div>
+                ))}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {paidDebts.length > 0 && (
+        <div className="bt-card">
+          <div className="bt-card-title" style={{ marginBottom: 10 }}>Quitados recentemente</div>
+          <table className="bt-table">
+            <thead><tr><th>Cliente</th><th>Valor</th><th>Quitado em</th></tr></thead>
+            <tbody>
+              {paidDebts.slice(0, 20).map((d) => (
+                <tr key={d.id}>
+                  <td>{d.customers?.name}</td>
+                  <td>{formatBRL(d.amount)}</td>
+                  <td>{new Date(d.paid_at).toLocaleDateString("pt-BR")}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 }
@@ -1684,6 +1841,7 @@ export default function AdminPanel({ staff, onLogout }) {
           {view === "produtosBar" && <ProductsCrud productType="bar" notify={notify} showCategory={true} />}
           {view === "clientes" && <ClientesView notify={notify} />}
           {view === "vendas" && <VendasView notify={notify} />}
+          {view === "devedores" && <DevedoresView notify={notify} />}
           {view === "relatorios" && <RelatoriosView notify={notify} staff={staff} />}
           {view === "config" && <ConfiguracoesView notify={notify} staff={staff} />}
         </div>

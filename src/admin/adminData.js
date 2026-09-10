@@ -2,7 +2,7 @@ import { supabase } from "../supabaseClient";
 
 export const MODULES_LIST = [
   "Dashboard", "Agenda", "Agendar Cliente", "Recorrências", "Mesas", "Cardápio / Produtos do Bar",
-  "Planos da Quadra", "Clientes (CRM)", "Vendas", "Relatórios", "Configurações", "Funcionários",
+  "Planos da Quadra", "Clientes (CRM)", "Vendas", "Devedores", "Relatórios", "Configurações", "Funcionários",
 ];
 
 export const DAYS_OF_WEEK = [
@@ -354,15 +354,56 @@ export async function fetchSessionPayments(sessionId) {
   return data;
 }
 
-export async function addSessionPayment({ sessionId, payerName, amount }) {
-  const { error } = await supabase.from("table_session_payments").insert({ session_id: sessionId, payer_name: payerName || null, amount });
+export async function addSessionPayment({ sessionId, payerName, amount, isCredit, customerId, tableNumber }) {
+  const { data: payment, error } = await supabase.from("table_session_payments").insert({
+    session_id: sessionId, payer_name: payerName || null, amount, is_credit: !!isCredit, customer_id: customerId || null,
+  }).select().single();
   if (error) throw error;
-  await logAction("Registrou pagamento parcial na mesa", "table_session_payment", sessionId, { pagador: payerName || "não identificado", valor: amount });
+  await logAction("Registrou pagamento parcial na mesa", "table_session_payment", sessionId, { pagador: payerName || "não identificado", valor: amount, crediario: !!isCredit });
+
+  if (isCredit) {
+    const { data: userData } = await supabase.auth.getUser();
+    const { data: debt, error: debtError } = await supabase.from("customer_debts").insert({
+      customer_id: customerId,
+      table_session_id: sessionId,
+      amount,
+      description: tableNumber ? `Consumo na mesa ${tableNumber}` : "Consumo em mesa",
+      created_by: userData?.user?.id || null,
+    }).select().single();
+    if (debtError) throw debtError;
+    await supabase.from("table_session_payments").update({ debt_id: debt.id }).eq("id", payment.id);
+    await logAction("Lançou consumo no crediário", "customer_debt", customerId, { valor: amount });
+  }
 }
 
 export async function removeSessionPayment(id) {
+  const { data: payment } = await supabase.from("table_session_payments").select("debt_id").eq("id", id).maybeSingle();
   const { error } = await supabase.from("table_session_payments").delete().eq("id", id);
   if (error) throw error;
+  if (payment?.debt_id) {
+    await supabase.from("customer_debts").delete().eq("id", payment.debt_id);
+    await logAction("Removeu lançamento de crediário", "customer_debt", payment.debt_id);
+  }
+}
+
+export async function fetchDebts() {
+  const { data, error } = await supabase
+    .from("customer_debts")
+    .select("*, customers(name, phone)")
+    .order("status")
+    .order("created_at", { ascending: false });
+  if (error) throw error;
+  return data;
+}
+
+export async function settleDebt(id) {
+  const { data: userData } = await supabase.auth.getUser();
+  const { error } = await supabase
+    .from("customer_debts")
+    .update({ status: "pago", paid_at: new Date().toISOString(), paid_by: userData?.user?.id || null })
+    .eq("id", id);
+  if (error) throw error;
+  await logAction("Deu baixa em dívida do crediário", "customer_debt", id);
 }
 
 export async function closeTableSession(sessionId, { tableNumber, serviceChargeEnabled, coverChargeEnabled, coverChargePerPerson, subtotal, total, splitCount }) {

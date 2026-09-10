@@ -7,6 +7,7 @@ export async function fetchMenuProducts() {
     .select("id, name, description, price, category, image_url")
     .eq("product_type", "bar")
     .eq("status", "ativo")
+    .eq("show_in_menu", true)
     .order("category")
     .order("name");
   if (error) throw error;
