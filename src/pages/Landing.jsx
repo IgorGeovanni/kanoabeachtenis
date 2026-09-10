@@ -1,10 +1,7 @@
-import { useState } from "react";
 import { CalendarDays, UtensilsCrossed } from "lucide-react";
 import { BRAND } from "../brand";
 
-export default function Landing({ onStartBooking }) {
-  const [showMenuNote, setShowMenuNote] = useState(false);
-
+export default function Landing({ onStartBooking, onShowMenu }) {
   return (
     <div className="kn-shell">
       <div className="kn-hero">
@@ -22,7 +19,7 @@ export default function Landing({ onStartBooking }) {
           </div>
         </div>
 
-        <div className="kn-choice-card" onClick={() => setShowMenuNote(true)}>
+        <div className="kn-choice-card" onClick={onShowMenu}>
           <div className="kn-choice-icon"><UtensilsCrossed size={22} /></div>
           <div>
             <div className="kn-choice-title">Ver cardápio</div>
@@ -30,12 +27,6 @@ export default function Landing({ onStartBooking }) {
           </div>
         </div>
       </div>
-
-      {showMenuNote && (
-        <div className="kn-note-box">
-          O cardápio digital estará disponível em breve por aqui.
-        </div>
-      )}
     </div>
   );
 }

@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import {
   LayoutDashboard, CalendarDays, Users, ClipboardList, UtensilsCrossed,
   Table2, ShoppingCart, FileBarChart, Settings, Search, Phone,
-  MessageCircle, ChevronLeft, Plus, Minus, LogOut, Menu
+  MessageCircle, ChevronLeft, Plus, Minus, LogOut, Menu, Repeat
 } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip, CartesianGrid } from "recharts";
 import { BRAND } from "../brand";
@@ -19,7 +19,9 @@ import {
   fetchDashboardStats, fetchMonthBookingsRaw,
   fetchTablesWithStatus, findCustomerByPhone, openTableSession,
   fetchSessionItems, addOrderItem, updateOrderItemQuantity, removeOrderItem, closeTableSession,
-  uploadProductImage,
+  fetchSessionPayments, addSessionPayment, removeSessionPayment,
+  fetchRecurringBookings, createRecurringBooking, cancelRecurringBooking,
+  uploadProductImage, fetchAuditLogs,
 } from "../admin/adminData";
 
 /* =========================================================================
@@ -167,6 +169,7 @@ const NAV_GROUPS = [
   { label: null, items: [{ id: "dashboard", label: "Dashboard", icon: LayoutDashboard, permKey: "Dashboard" }] },
   { label: "Quadra", items: [
     { id: "agenda", label: "Agenda", icon: CalendarDays, permKey: "Agenda" },
+    { id: "recorrencias", label: "Recorrências", icon: Repeat, permKey: "Recorrências" },
     { id: "planosQuadra", label: "Planos da Quadra", icon: ClipboardList, permKey: "Planos da Quadra" },
   ]},
   { label: "Bar", items: [
@@ -184,6 +187,7 @@ const NAV_GROUPS = [
 const VIEW_META = {
   dashboard: { title: "Dashboard", sub: "Visão geral da operação" },
   agenda: { title: "Agenda", sub: "Reservas e disponibilidade da quadra" },
+  recorrencias: { title: "Recorrências", sub: "Clientes com horário fixo toda semana" },
   planosQuadra: { title: "Planos da Quadra", sub: "Produtos vendidos para o agendamento da quadra" },
   mesas: { title: "Mesas", sub: "Controle de mesas e comandas do bar" },
   produtosBar: { title: "Cardápio / Produtos do Bar", sub: "Itens disponíveis para venda no bar" },
@@ -467,6 +471,136 @@ function AgendaView({ notify }) {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+/* =========================================================================
+   RECORRÊNCIAS — cliente com horário fixo toda semana
+   ========================================================================= */
+function RecorrenciasView({ notify }) {
+  const [list, setList] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [showForm, setShowForm] = useState(false);
+  const [products, setProducts] = useState([]);
+  const [phone, setPhone] = useState("");
+  const [foundCustomer, setFoundCustomer] = useState(null);
+  const [productId, setProductId] = useState("");
+  const [weekday, setWeekday] = useState(1);
+  const [startTime, setStartTime] = useState("08:00");
+  const [startDate, setStartDate] = useState(() => dateKey(new Date()));
+  const [endDate, setEndDate] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  const load = async () => {
+    setLoading(true);
+    setList(await fetchRecurringBookings());
+    setLoading(false);
+  };
+  useEffect(() => { load(); fetchProducts("court").then((all) => setProducts(all.filter((p) => p.status === "ativo"))); }, []);
+
+  const lookupCustomer = async () => {
+    if (!phone.trim()) return;
+    const c = await findCustomerByPhone(phone);
+    setFoundCustomer(c);
+    if (!c) notify("Cliente não encontrado — cadastre primeiro em Clientes.");
+  };
+
+  const submit = async () => {
+    if (!foundCustomer || !productId) { notify("Selecione um cliente e um produto."); return; }
+    setSaving(true);
+    try {
+      const { generated, skipped } = await createRecurringBooking({
+        customerId: foundCustomer.id, productId, weekday, startTime, startDate, endDate: endDate || null,
+      });
+      notify(`Recorrência criada — ${generated} agendamentos gerados${skipped ? `, ${skipped} pulados por já estarem ocupados` : ""}.`);
+      setShowForm(false); setPhone(""); setFoundCustomer(null); setProductId(""); setEndDate("");
+      load();
+    } catch (e) {
+      notify("Erro ao criar recorrência: " + e.message);
+    }
+    setSaving(false);
+  };
+
+  const cancel = async (r) => {
+    await cancelRecurringBooking(r.id);
+    notify("Recorrência cancelada — os agendamentos futuros dela também foram cancelados.");
+    load();
+  };
+
+  return (
+    <div>
+      <div className="bt-row" style={{ marginBottom: 16 }}>
+        <div className="bt-card-sub">Clientes que jogam no mesmo dia e horário toda semana. Gera os próximos {8} agendamentos automaticamente.</div>
+        <button className="bt-btn bt-btn-primary" onClick={() => setShowForm(true)}><Plus size={15} /> Nova recorrência</button>
+      </div>
+
+      {showForm && (
+        <div className="bt-card" style={{ background: "var(--surface-alt)", marginBottom: 16 }}>
+          <div className="bt-field">
+            <div className="bt-label">Telefone do cliente</div>
+            <div style={{ display: "flex", gap: 8 }}>
+              <input className="bt-input" value={phone} onChange={(e) => setPhone(e.target.value)} />
+              <button className="bt-btn bt-btn-ghost bt-btn-sm" onClick={lookupCustomer}>Buscar</button>
+            </div>
+            {foundCustomer && <div style={{ fontSize: 12.5, color: "var(--court)", marginTop: 6 }}>Cliente: {foundCustomer.name}</div>}
+          </div>
+          <div className="bt-grid-2">
+            <div className="bt-field">
+              <div className="bt-label">Produto / plano</div>
+              <select className="bt-select" value={productId} onChange={(e) => setProductId(e.target.value)}>
+                <option value="">Selecione...</option>
+                {products.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+              </select>
+            </div>
+            <div className="bt-field">
+              <div className="bt-label">Dia da semana</div>
+              <select className="bt-select" value={weekday} onChange={(e) => setWeekday(Number(e.target.value))}>
+                {DAYS_OF_WEEK.map((d) => <option key={d.id} value={d.id}>{d.label}</option>)}
+              </select>
+            </div>
+          </div>
+          <div className="bt-grid-2">
+            <div className="bt-field"><div className="bt-label">Horário</div><input type="time" className="bt-input" value={startTime} onChange={(e) => setStartTime(e.target.value)} /></div>
+            <div className="bt-field"><div className="bt-label">Começa em</div><input type="date" className="bt-input" value={startDate} onChange={(e) => setStartDate(e.target.value)} /></div>
+          </div>
+          <div className="bt-field" style={{ maxWidth: 220 }}>
+            <div className="bt-label">Termina em (opcional)</div>
+            <input type="date" className="bt-input" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
+          </div>
+          <div style={{ display: "flex", gap: 8 }}>
+            <button className="bt-btn bt-btn-ghost bt-btn-sm" onClick={() => setShowForm(false)}>Cancelar</button>
+            <button className="bt-btn bt-btn-primary bt-btn-sm" disabled={saving} onClick={submit}>{saving ? "Criando..." : "Criar recorrência"}</button>
+          </div>
+        </div>
+      )}
+
+      <div className="bt-card" style={{ padding: 0 }}>
+        {loading ? <div className="bt-card-sub" style={{ padding: 16 }}>Carregando...</div> : list.length === 0 ? (
+          <div className="bt-card-sub" style={{ padding: 16 }}>Nenhuma recorrência cadastrada ainda.</div>
+        ) : (
+          <table className="bt-table">
+            <thead><tr><th>Cliente</th><th>Dia</th><th>Horário</th><th>Produto</th><th>Período</th><th>Status</th><th></th></tr></thead>
+            <tbody>
+              {list.map((r) => (
+                <tr key={r.id}>
+                  <td style={{ fontWeight: 600 }}>{r.customers?.name}</td>
+                  <td>{DAYS_OF_WEEK.find((d) => d.id === r.weekday)?.label}</td>
+                  <td>{r.start_time.slice(0, 5)}</td>
+                  <td>{r.products?.name}</td>
+                  <td style={{ fontSize: 12.5, color: "var(--ink-soft)" }}>
+                    {new Date(`${r.start_date}T00:00:00`).toLocaleDateString("pt-BR")} até {r.end_date ? new Date(`${r.end_date}T00:00:00`).toLocaleDateString("pt-BR") : "indefinido"}
+                  </td>
+                  <td><StatusBadge status={r.status} /></td>
+                  <td style={{ textAlign: "right" }}>
+                    {r.status === "ativo" && <button className="bt-btn bt-btn-ghost bt-btn-sm" onClick={() => cancel(r)}>Cancelar</button>}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
     </div>
   );
 }
@@ -839,6 +973,7 @@ function AbrirMesaPanel({ table, onClose, notify, onOpened }) {
     try {
       await openTableSession({
         tableId: table.id,
+        tableNumber: table.number,
         customerId: foundCustomer?.id || null,
         customerName: nome || null,
         customerPhone: telefone || null,
@@ -848,7 +983,9 @@ function AbrirMesaPanel({ table, onClose, notify, onOpened }) {
       onOpened();
       onClose();
     } catch (e) {
-      notify("Erro ao abrir mesa: " + e.message);
+      notify(e.message);
+      onOpened(); // atualiza a grade — se foi corrida, a mesa já aparece ocupada
+      onClose();
     }
     setSaving(false);
   };
@@ -891,23 +1028,29 @@ function ComandaPanel({ table, notify, onClose, onClosed }) {
   const [couvertValue, setCouvertValue] = useState(10);
   const [pessoas, setPessoas] = useState(table.session.people_count || 1);
   const [confirming, setConfirming] = useState(false);
+  const [payments, setPayments] = useState([]);
+  const [payerName, setPayerName] = useState("");
+  const [payerAmount, setPayerAmount] = useState("");
 
   const load = async () => {
     setLoading(true);
     setItems(await fetchSessionItems(table.session.id));
     setLoading(false);
   };
-  useEffect(() => { load(); fetchProducts("bar").then((all) => setProducts(all.filter((p) => p.status === "ativo"))); }, []);
+  const loadPayments = async () => setPayments(await fetchSessionPayments(table.session.id));
+  useEffect(() => { load(); loadPayments(); fetchProducts("bar").then((all) => setProducts(all.filter((p) => p.status === "ativo"))); }, []);
 
   const subtotal = items.reduce((s, it) => s + it.quantity * Number(it.unit_price), 0);
   const serviceValue = serviceOn ? subtotal * 0.1 : 0;
   const couvertTotal = couvertOn ? pessoas * couvertValue : 0;
   const total = subtotal + serviceValue + couvertTotal;
+  const paidSoFar = payments.reduce((s, p) => s + Number(p.amount), 0);
+  const remaining = Math.max(0, total - paidSoFar);
 
   const addItem = async () => {
     if (!addProductId) return;
     const product = products.find((p) => p.id === addProductId);
-    await addOrderItem({ sessionId: table.session.id, productId: addProductId, quantity: addQty, unitPrice: product.price });
+    await addOrderItem({ sessionId: table.session.id, productId: addProductId, quantity: addQty, unitPrice: product.price, productName: product.name });
     setAddProductId(""); setAddQty(1);
     load();
   };
@@ -921,17 +1064,29 @@ function ComandaPanel({ table, notify, onClose, onClosed }) {
     load();
   };
 
+  const addPayment = async () => {
+    const amt = Number(payerAmount);
+    if (!amt || amt <= 0) { notify("Informe um valor válido."); return; }
+    await addSessionPayment({ sessionId: table.session.id, payerName, amount: amt });
+    setPayerName(""); setPayerAmount("");
+    loadPayments();
+  };
+  const removePayment = async (id) => { await removeSessionPayment(id); loadPayments(); };
+
   const confirmClose = async () => {
     try {
       await closeTableSession(table.session.id, {
+        tableNumber: table.number,
         serviceChargeEnabled: serviceOn, coverChargeEnabled: couvertOn, coverChargePerPerson: couvertOn ? couvertValue : 0,
-        subtotal, total,
+        subtotal, total, splitCount: payments.length,
       });
       notify(`Mesa ${table.number} fechada — consumo registrado.`);
       onClosed();
       onClose();
     } catch (e) {
-      notify("Erro ao fechar mesa: " + e.message);
+      notify(e.message);
+      onClosed(); // atualiza a grade — se foi corrida, a mesa já aparece livre
+      onClose();
     }
   };
 
@@ -1010,6 +1165,35 @@ function ComandaPanel({ table, notify, onClose, onClosed }) {
               </div>
             </div>
 
+            <div style={{ marginTop: 18, borderTop: "1px solid var(--border)", paddingTop: 14 }}>
+              <div className="bt-card-title" style={{ fontSize: 13, marginBottom: 8 }}>Dividir conta (opcional)</div>
+              {payments.length > 0 && (
+                <div style={{ marginBottom: 10 }}>
+                  {payments.map((p) => (
+                    <div className="bt-item-row" key={p.id}>
+                      <div style={{ flex: 1 }}>{p.payer_name || "Sem nome"}</div>
+                      <div style={{ fontWeight: 700 }}>{formatBRL(p.amount)}</div>
+                      <button className="bt-btn bt-btn-ghost bt-btn-sm" onClick={() => removePayment(p.id)}>×</button>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <div style={{ display: "flex", gap: 6 }}>
+                <input className="bt-input" placeholder="Nome (opcional)" value={payerName} onChange={(e) => setPayerName(e.target.value)} />
+                <input type="number" min={0} step="0.01" className="bt-input" style={{ width: 100 }} placeholder="Valor" value={payerAmount} onChange={(e) => setPayerAmount(e.target.value)} />
+                <button className="bt-btn bt-btn-primary bt-btn-sm" onClick={addPayment}><Plus size={13} /></button>
+              </div>
+              {payments.length > 0 && (
+                <div style={{ marginTop: 10, fontSize: 13 }}>
+                  <div className="bt-row"><span>Recebido até agora</span><span style={{ fontWeight: 700 }}>{formatBRL(paidSoFar)}</span></div>
+                  <div className="bt-row">
+                    <span>Falta receber</span>
+                    <span style={{ fontWeight: 700, color: remaining > 0.009 ? "var(--danger)" : "var(--success)" }}>{formatBRL(remaining)}</span>
+                  </div>
+                </div>
+              )}
+            </div>
+
             <button className="bt-btn bt-btn-primary" style={{ width: "100%", justifyContent: "center", marginTop: 20 }} onClick={() => setConfirming(true)}>Fechar mesa</button>
           </>
         ) : (
@@ -1024,6 +1208,15 @@ function ComandaPanel({ table, notify, onClose, onClosed }) {
                   <span>Total</span><span>{formatBRL(total)}</span>
                 </div>
               </div>
+              {payments.length > 0 && (
+                <div style={{ marginTop: 12, borderTop: "1px solid var(--border)", paddingTop: 10 }}>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: "var(--ink-soft)", marginBottom: 6 }}>Dividido em {payments.length} pagamento{payments.length > 1 ? "s" : ""}:</div>
+                  {payments.map((p) => (
+                    <div key={p.id} className="bt-row" style={{ fontSize: 13 }}><span>{p.payer_name || "Sem nome"}</span><span>{formatBRL(p.amount)}</span></div>
+                  ))}
+                  {remaining > 0.009 && <div style={{ fontSize: 12.5, color: "var(--danger)", marginTop: 6 }}>Ainda falta {formatBRL(remaining)} — vai fechar mesmo assim?</div>}
+                </div>
+              )}
             </div>
             <div style={{ display: "flex", gap: 8, marginTop: 16 }}>
               <button className="bt-btn bt-btn-ghost" style={{ flex: 1 }} onClick={() => setConfirming(false)}>Voltar</button>
@@ -1104,7 +1297,7 @@ function VendasView({ notify }) {
     if (!foundCustomer || !productId) { notify("Selecione um cliente e um produto."); return; }
     const product = products.find((p) => p.id === productId);
     try {
-      await createSale({ customerId: foundCustomer.id, productId, quantity, unitPrice: product.price, saleType });
+      await createSale({ customerId: foundCustomer.id, productId, quantity, unitPrice: product.price, saleType, productName: product.name });
       notify("Venda registrada.");
       setShowForm(false); setPhone(""); setFoundCustomer(null); setProductId(""); setQuantity(1);
       load();
@@ -1182,15 +1375,53 @@ function VendasView({ notify }) {
 /* =========================================================================
    RELATÓRIOS — estrutura modular (proposital, sem regras ainda definidas)
    ========================================================================= */
+function formatLogDetails(details) {
+  if (!details || typeof details !== "object") return "";
+  return Object.entries(details)
+    .filter(([, v]) => v !== null && v !== undefined && v !== "")
+    .map(([k, v]) => `${k}: ${Array.isArray(v) ? v.join(", ") : v}`)
+    .join(" · ");
+}
+
+function HistoricoAlteracoes({ notify }) {
+  const [logs, setLogs] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchAuditLogs().then(setLogs).catch((e) => notify("Erro ao carregar histórico: " + e.message)).finally(() => setLoading(false));
+  }, []);
+
+  return (
+    <div className="bt-card">
+      <div className="bt-card-title" style={{ marginBottom: 4 }}>Histórico de alterações</div>
+      <div className="bt-card-sub" style={{ marginBottom: 14 }}>Registro simples de tudo que foi feito no painel — mais recente primeiro.</div>
+      {loading ? <div className="bt-card-sub">Carregando...</div> : logs.length === 0 ? (
+        <div className="bt-card-sub">Nenhuma ação registrada ainda.</div>
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column", gap: 2, maxHeight: 420, overflowY: "auto" }}>
+          {logs.map((l) => (
+            <div key={l.id} style={{ fontSize: 13, padding: "8px 0", borderBottom: "1px solid var(--border)" }}>
+              <span style={{ color: "var(--ink-faint)" }}>{new Date(l.created_at).toLocaleString("pt-BR")}</span>
+              {" · "}<strong>{l.actorName}</strong>{" · "}{l.action}
+              {l.details && <span style={{ color: "var(--ink-soft)" }}> — {formatLogDetails(l.details)}</span>}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 const REPORT_GROUPS = [
   { group: "Quadra", items: ["Agendamentos", "Ocupação", "Produtos/planos", "Vendas"] },
   { group: "Bar", items: ["Produtos vendidos", "Consumo por período", "Comandas", "Mesas", "Produtos mais vendidos"] },
   { group: "Clientes", items: ["Clientes cadastrados", "Ativos/inativos", "Utilização da quadra", "Consumo no bar"] },
 ];
-function RelatoriosView() {
+function RelatoriosView({ notify, staff }) {
   return (
-    <div>
-      <div className="bt-card-sub" style={{ marginBottom: 16 }}>Estrutura modular, pronta para exportação em Excel (.xlsx) assim que cada relatório for definido.</div>
+    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+      {staff.is_owner && <HistoricoAlteracoes notify={notify} />}
+      <div className="bt-card-sub">Estrutura modular, pronta para exportação em Excel (.xlsx) assim que cada relatório for definido.</div>
       <div className="bt-grid-3">
         {REPORT_GROUPS.map((g) => (
           <div className="bt-card" key={g.group}>
@@ -1447,12 +1678,13 @@ export default function AdminPanel({ staff, onLogout }) {
         <div className="bt-content">
           {view === "dashboard" && <DashboardView />}
           {view === "agenda" && <AgendaView notify={notify} />}
+          {view === "recorrencias" && <RecorrenciasView notify={notify} />}
           {view === "planosQuadra" && <ProductsCrud productType="court" notify={notify} showCategory={false} />}
           {view === "mesas" && <MesasView />}
           {view === "produtosBar" && <ProductsCrud productType="bar" notify={notify} showCategory={true} />}
           {view === "clientes" && <ClientesView notify={notify} />}
           {view === "vendas" && <VendasView notify={notify} />}
-          {view === "relatorios" && <RelatoriosView />}
+          {view === "relatorios" && <RelatoriosView notify={notify} staff={staff} />}
           {view === "config" && <ConfiguracoesView notify={notify} staff={staff} />}
         </div>
       </div>
