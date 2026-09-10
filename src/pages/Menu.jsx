@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
-import { ChevronLeft } from "lucide-react";
-import { fetchMenuProducts } from "../data/menuData";
+import { ChevronLeft, Search } from "lucide-react";
+import { fetchMenuProducts, fetchMenuCategoriesOrder, DEFAULT_MENU_CATEGORIES } from "../data/menuData";
 
 function formatBRL(n) {
   return Number(n || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -8,17 +8,29 @@ function formatBRL(n) {
 
 export default function Menu({ onBack }) {
   const [products, setProducts] = useState([]);
+  const [categoryOrder, setCategoryOrder] = useState(DEFAULT_MENU_CATEGORIES);
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState("");
+  const [query, setQuery] = useState("");
 
   useEffect(() => {
-    fetchMenuProducts()
-      .then(setProducts)
+    Promise.all([fetchMenuProducts(), fetchMenuCategoriesOrder()])
+      .then(([p, order]) => { setProducts(p); setCategoryOrder(order); })
       .catch(() => setErrorMsg("Não foi possível carregar o cardápio agora."))
       .finally(() => setLoading(false));
   }, []);
 
-  const categories = [...new Set(products.map((p) => p.category || "Outros"))];
+  const filtered = query.trim()
+    ? products.filter((p) => p.name.toLowerCase().includes(query.trim().toLowerCase()))
+    : products;
+
+  // Categorias na ordem configurada; qualquer categoria fora da lista
+  // (ex.: cadastrada depois) aparece no final, em ordem alfabética.
+  const presentCategories = [...new Set(filtered.map((p) => p.category || "Outros"))];
+  const orderedCategories = [
+    ...categoryOrder.filter((c) => presentCategories.includes(c)),
+    ...presentCategories.filter((c) => !categoryOrder.includes(c)).sort(),
+  ];
 
   return (
     <div className="kn-shell">
@@ -30,21 +42,37 @@ export default function Menu({ onBack }) {
       </div>
 
       <div className="kn-card-title" style={{ fontSize: 20, marginBottom: 4 }}>Cardápio</div>
-      <div className="kn-card-sub" style={{ marginBottom: 22 }}>Só para consulta — feche o pedido direto com a equipe no local.</div>
+      <div className="kn-card-sub" style={{ marginBottom: 16 }}>Só para consulta — feche o pedido direto com a equipe no local.</div>
+
+      {!loading && !errorMsg && products.length > 0 && (
+        <div style={{ position: "relative", marginBottom: 22 }}>
+          <Search size={16} style={{ position: "absolute", left: 12, top: 12, color: "var(--ink-faint)" }} />
+          <input
+            className="kn-input"
+            style={{ paddingLeft: 36 }}
+            placeholder="Buscar produto..."
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+          />
+        </div>
+      )}
 
       {loading && <div className="kn-card-sub">Carregando cardápio...</div>}
       {errorMsg && <div className="kn-card-sub" style={{ color: "var(--danger)" }}>{errorMsg}</div>}
       {!loading && !errorMsg && products.length === 0 && (
         <div className="kn-card-sub">Cardápio ainda não cadastrado.</div>
       )}
+      {!loading && !errorMsg && products.length > 0 && filtered.length === 0 && (
+        <div className="kn-card-sub">Nenhum produto encontrado para "{query}".</div>
+      )}
 
-      {categories.map((cat) => (
+      {orderedCategories.map((cat) => (
         <div key={cat} style={{ marginBottom: 26 }}>
           <div style={{ fontSize: 11.5, fontWeight: 700, color: "var(--ink-faint)", textTransform: "uppercase", letterSpacing: ".05em", marginBottom: 10 }}>
             {cat}
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-            {products.filter((p) => (p.category || "Outros") === cat).map((p) => (
+            {filtered.filter((p) => (p.category || "Outros") === cat).map((p) => (
               <div key={p.id} style={{ display: "flex", gap: 12, background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 14, padding: 12 }}>
                 {p.image_url ? (
                   <img src={p.image_url} alt={p.name} style={{ width: 64, height: 64, borderRadius: 10, objectFit: "cover", flexShrink: 0 }} />

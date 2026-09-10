@@ -133,6 +133,8 @@ const CSS = `
   }
 `;
 
+const DEFAULT_MENU_CATEGORIES = ["Bebidas", "Petiscos", "Porções", "Comidas", "Lanches", "Sobremesas", "Outros"];
+
 function formatBRL(n) {
   return Number(n || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }
@@ -849,13 +851,17 @@ function ProductsCrud({ productType, notify, showCategory }) {
   const [imageFile, setImageFile] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [dragging, setDragging] = useState(false);
+  const [categories, setCategories] = useState(DEFAULT_MENU_CATEGORIES);
 
   const load = async () => {
     setLoading(true);
     setProducts(await fetchProducts(productType));
     setLoading(false);
   };
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    load();
+    if (showCategory) fetchSetting("menu_categories", DEFAULT_MENU_CATEGORIES).then(setCategories);
+  }, []);
 
   const startCreate = () => { setEditingId(null); setForm({ name: "", description: "", price: "", category: "Bebidas", image_url: "", show_in_menu: true }); setImageFile(null); setShowForm(true); };
   const startEdit = (p) => { setEditingId(p.id); setForm({ name: p.name, description: p.description || "", price: p.price, category: p.category || "Bebidas", image_url: p.image_url || "", show_in_menu: p.show_in_menu !== false }); setImageFile(null); setShowForm(true); };
@@ -917,7 +923,7 @@ function ProductsCrud({ productType, notify, showCategory }) {
             <div className="bt-field" style={{ maxWidth: 220 }}>
               <div className="bt-label">Categoria</div>
               <select className="bt-select" value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })}>
-                {["Bebidas", "Comidas", "Porções", "Lanches", "Sobremesas", "Outros"].map((c) => <option key={c} value={c}>{c}</option>)}
+                {categories.map((c) => <option key={c} value={c}>{c}</option>)}
               </select>
             </div>
           )}
@@ -1671,6 +1677,8 @@ function ConfiguracoesView({ notify, staff }) {
   const [selectedDay, setSelectedDay] = useState(0);
   const [staffList, setStaffList] = useState([]);
   const [editingStaff, setEditingStaff] = useState(undefined);
+  const [menuCategories, setMenuCategories] = useState(DEFAULT_MENU_CATEGORIES);
+  const [newCategory, setNewCategory] = useState("");
   const variables = ["{nome}", "{telefone}", "{data}", "{horario}", "{produto}", "{valor}"];
 
   const loadSettings = async () => {
@@ -1678,10 +1686,32 @@ function ConfiguracoesView({ notify, staff }) {
     setCompanyName(company.name); setCompanyPhone(company.phone);
     setMsg(await fetchSetting("whatsapp_message", msg));
     setMesasCount(await fetchSetting("mesas_count", 50));
+    setMenuCategories(await fetchSetting("menu_categories", DEFAULT_MENU_CATEGORIES));
     setShifts(await fetchAllShifts());
     if (staff.is_owner) setStaffList(await fetchStaff());
   };
   useEffect(() => { loadSettings(); }, []);
+
+  const moveCategory = (index, delta) => {
+    setMenuCategories((prev) => {
+      const next = [...prev];
+      const target = index + delta;
+      if (target < 0 || target >= next.length) return prev;
+      [next[index], next[target]] = [next[target], next[index]];
+      return next;
+    });
+  };
+  const removeCategory = (cat) => setMenuCategories((prev) => prev.filter((c) => c !== cat));
+  const addCategory = () => {
+    const name = newCategory.trim();
+    if (!name || menuCategories.includes(name)) return;
+    setMenuCategories((prev) => [...prev, name]);
+    setNewCategory("");
+  };
+  const saveCategories = async () => {
+    await saveSetting("menu_categories", menuCategories);
+    notify("Ordem das categorias salva.");
+  };
 
   const dayShifts = shifts.filter((s) => s.weekday === selectedDay);
   const updateTurno = async (id, field, value) => { await updateShift(id, { [field]: value }); setShifts((prev) => prev.map((s) => s.id === id ? { ...s, [field]: value } : s)); };
@@ -1775,6 +1805,28 @@ function ConfiguracoesView({ notify, staff }) {
           <input type="number" className="bt-input" value={mesasCount} onChange={(e) => setMesasCount(Number(e.target.value))} />
         </div>
         <button className="bt-btn bt-btn-primary" onClick={async () => { await saveSetting("mesas_count", mesasCount); notify("Quantidade de mesas salva."); }}>Salvar</button>
+      </div>
+
+      <div className="bt-card">
+        <div className="bt-card-title" style={{ marginBottom: 4 }}>Categorias do Cardápio</div>
+        <div className="bt-card-sub" style={{ marginBottom: 14 }}>A ordem aqui é a mesma ordem em que as categorias aparecem no cardápio público.</div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 14 }}>
+          {menuCategories.map((cat, i) => (
+            <div key={cat} className="bt-row" style={{ padding: "8px 10px", border: "1px solid var(--border)", borderRadius: 8 }}>
+              <span style={{ fontSize: 13.5, fontWeight: 600 }}>{cat}</span>
+              <div style={{ display: "flex", gap: 4 }}>
+                <button className="bt-btn bt-btn-ghost bt-btn-sm" disabled={i === 0} onClick={() => moveCategory(i, -1)}>↑</button>
+                <button className="bt-btn bt-btn-ghost bt-btn-sm" disabled={i === menuCategories.length - 1} onClick={() => moveCategory(i, 1)}>↓</button>
+                <button className="bt-btn bt-btn-ghost bt-btn-sm" onClick={() => removeCategory(cat)}>Remover</button>
+              </div>
+            </div>
+          ))}
+        </div>
+        <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
+          <input className="bt-input" placeholder="Nova categoria (ex.: Petiscos)" value={newCategory} onChange={(e) => setNewCategory(e.target.value)} />
+          <button className="bt-btn bt-btn-ghost bt-btn-sm" onClick={addCategory}><Plus size={13} /> Adicionar</button>
+        </div>
+        <button className="bt-btn bt-btn-primary" onClick={saveCategories}>Salvar ordem</button>
       </div>
 
       {staff.is_owner && (
